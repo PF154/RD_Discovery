@@ -1,16 +1,19 @@
 #include <iostream>
-#include "SFML-3.0.0/include/SFML/Graphics.hpp"
 
 #include <memory>
 #include <cstdint>
 #include <random>
 #include <fstream>
-#include <string> 
+#include <string>
+#include <cufft.h>
+#include <algorithm>
+
+#include <SFML/Graphics.hpp>
 
 #include "definitions.cuh"
 
-#define Nx 500
-#define Ny 500
+#define Nx 100
+#define Ny 100
 
 
 __constant__  GlobalConstants globalConsts;
@@ -89,180 +92,36 @@ void write_ppm(const std::string& filename, const uint8_t* data, int width, int 
     out.close();
 }
 
-extern "C" void generate_image_based_on_params(double Du, double Dv, double F, double k, int timesteps)
-{
-    GlobalConstants h_consts;
-    h_consts.Du = Du;
-    h_consts.Dv = Dv;
-    h_consts.F = F;
-    h_consts.k = k;
-
-    setGlobalConsts(&h_consts);
-
-    const unsigned int total_array_size(Nx * Ny);
-
-    std::unique_ptr<double[]> h_u_data = std::make_unique<double[]>(total_array_size);
-    std::unique_ptr<double[]> h_v_data = std::make_unique<double[]>(total_array_size);
-
-    std::random_device rd;
-    std::mt19937 e2(rd());
-    std::uniform_real_distribution<> dist(0, 1);
-
-    for (int i=0; i<Nx*Ny; i++)
-    {
-        h_u_data[i] = 1.0;
-        h_v_data[i] = 0.0;
-    }
-
-    // Square
-    for (int y = Ny/2 - 10; y < Ny/2 + 10; y++)
-    {
-        for (int x = Nx/2 - 10; x < Nx/2 + 10; x++)
-        {
-            h_u_data[y * Nx + x] = 0.5;
-            h_v_data[y * Nx + x] = 0.25;
-        }
-    }
-    
-    size_t pixelBytes = total_array_size * 4 * sizeof(uint8_t);
-
-    std::unique_ptr<uint8_t[]> h_pixels = std::make_unique<uint8_t[]>(pixelBytes);
-
-    uint8_t *d_pixels;
-    gpuErrchk(cudaMalloc(&d_pixels, pixelBytes));
-
-    double *d_u_ping, *d_v_ping, *d_u_pong, *d_v_pong;
-    size_t bytes = sizeof(double) * total_array_size;
-
-    gpuErrchk(cudaMalloc(&d_u_ping, bytes));
-    gpuErrchk(cudaMalloc(&d_v_ping, bytes));
-    gpuErrchk(cudaMalloc(&d_u_pong, bytes));
-    gpuErrchk(cudaMalloc(&d_v_pong, bytes));
-
-    gpuErrchk(cudaMemcpy(d_u_ping, h_u_data.get(), bytes, cudaMemcpyHostToDevice));
-    gpuErrchk(cudaMemcpy(d_v_ping, h_v_data.get(), bytes, cudaMemcpyHostToDevice));
-
-    for (int i=0; i<timesteps; i++)
-    {
-        compute_time_step<<<int(Nx*Ny/32) + 1, 32>>>(d_u_ping, d_v_ping, d_u_pong, d_v_pong);
-        gpuErrchk(cudaDeviceSynchronize());
-
-        std::swap(d_u_ping, d_u_pong);
-        std::swap(d_v_ping, d_v_pong);
-    }
-
-    map_to_rgba<<<int(Nx*Ny/32) + 1, 32>>>(d_u_pong, d_v_pong, d_pixels);
-    gpuErrchk(cudaDeviceSynchronize());
-
-    gpuErrchk(cudaMemcpy(h_pixels.get(), d_pixels, pixelBytes, cudaMemcpyDeviceToHost));
-
-    std::string filename = std::to_string(Du) + "_" + std::to_string(Dv) + "_" + std::to_string(F) + "_" + std::to_string(k) + ".ppm";
-    
-    write_ppm(filename, h_pixels.get(), Nx, Ny);
-
-    cudaFree(d_pixels);
-
-    cudaFree(d_u_ping);
-    cudaFree(d_v_ping);
-    cudaFree(d_u_pong);
-    cudaFree(d_v_pong);
-}
-
-// int main()
-// {
-    
-// }
-
 int main()
 {
-    const unsigned int total_array_size(Nx * Ny);
+    // Create a 500x500 window
+    sf::RenderWindow window(sf::VideoMode(500, 500), "SFML Test Window");
 
-    std::unique_ptr<double[]> h_u_data = std::make_unique<double[]>(total_array_size);
-    std::unique_ptr<double[]> h_v_data = std::make_unique<double[]>(total_array_size);
+    // Create a green rectangle in the middle
+    sf::RectangleShape greenBox(sf::Vector2f(200.f, 200.f));
+    greenBox.setFillColor(sf::Color::Green);
+    greenBox.setPosition(150.f, 150.f);  // Center it (500-200)/2 = 150
 
-    std::random_device rd;
-    std::mt19937 e2(rd());
-    std::uniform_real_distribution<> dist(0, 1);
-
-    for (int i=0; i<Nx*Ny; i++)
+    // Main loop
+    while (window.isOpen())
     {
-        h_u_data[i] = 1.0;
-        h_v_data[i] = 0.0;
-    }
-
-    // Square
-    for (int y = Ny/2 - 10; y < Ny/2 + 10; y++)
-    {
-        for (int x = Nx/2 - 10; x < Nx/2 + 10; x++)
+        // Handle events
+        sf::Event event;
+        while (window.pollEvent(event))
         {
-            // h_u_data[y * Nx + x] = dist(e2);
-            // h_v_data[y * Nx + x] = dist(e2);
-            h_u_data[y * Nx + x] = 0.5;
-            h_v_data[y * Nx + x] = 0.25;
-        }
-    }
-
-    sf::RenderWindow window(sf::VideoMode(sf::Vector2u{Nx, Ny}), "Reaction Diffusion Simulation");
-    window.setFramerateLimit(60);
-    
-    size_t pixelBytes = total_array_size * 4 * sizeof(uint8_t);
-
-    std::unique_ptr<uint8_t[]> h_pixels = std::make_unique<uint8_t[]>(pixelBytes);
-
-    uint8_t *d_pixels;
-    gpuErrchk(cudaMalloc(&d_pixels, pixelBytes));
-
-    double *d_u_ping, *d_v_ping, *d_u_pong, *d_v_pong;
-    size_t bytes = sizeof(double) * total_array_size;
-
-    gpuErrchk(cudaMalloc(&d_u_ping, bytes));
-    gpuErrchk(cudaMalloc(&d_v_ping, bytes));
-    gpuErrchk(cudaMalloc(&d_u_pong, bytes));
-    gpuErrchk(cudaMalloc(&d_v_pong, bytes));
-
-    gpuErrchk(cudaMemcpy(d_u_ping, h_u_data.get(), bytes, cudaMemcpyHostToDevice));
-    gpuErrchk(cudaMemcpy(d_v_ping, h_v_data.get(), bytes, cudaMemcpyHostToDevice));
-
-    sf::Texture texture(sf::Vector2u{Nx, Ny});
-    sf::Sprite sprite(texture);
-
-    const int timesteps_per_frame = 10;
-    while(window.isOpen())
-    {
-        while(auto maybeEvent = window.pollEvent())
-        {
-            if(maybeEvent->is<sf::Event::Closed>())
-            {
+            if (event.type == sf::Event::Closed)
                 window.close();
-            }
         }
 
-        for (int i=0; i<timesteps_per_frame; i++)
-        {
-            compute_time_step<<<int(Nx*Ny/32) + 1, 32>>>(d_u_ping, d_v_ping, d_u_pong, d_v_pong);
-            gpuErrchk(cudaDeviceSynchronize());
+        // Clear window
+        window.clear(sf::Color::Black);
 
-            std::swap(d_u_ping, d_u_pong);
-            std::swap(d_v_ping, d_v_pong);
-        }
+        // Draw the green box
+        window.draw(greenBox);
 
-        map_to_rgba<<<int(Nx*Ny/32) + 1, 32>>>(d_u_pong, d_v_pong, d_pixels);
-        gpuErrchk(cudaDeviceSynchronize());
-
-        gpuErrchk(cudaMemcpy(h_pixels.get(), d_pixels, pixelBytes, cudaMemcpyDeviceToHost));
-        texture.update(h_pixels.get());
-
-        window.clear();
-        window.draw(sprite);
+        // Display
         window.display();
     }
 
-    cudaFree(d_pixels);
-
-    cudaFree(d_u_ping);
-    cudaFree(d_v_ping);
-    cudaFree(d_u_pong);
-    cudaFree(d_v_pong);
-
-    return 0; 
+    return 0;
 }

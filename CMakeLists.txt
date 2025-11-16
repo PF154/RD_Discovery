@@ -17,11 +17,8 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 # Use 'Auto' to detect automatically or specify your GPU architecture
 set(CMAKE_CUDA_ARCHITECTURES 75)
 
-# Add SFML directory
-set(SFML_DIR "${CMAKE_SOURCE_DIR}/SFML-3.0.0/lib/cmake/SFML")
-
-# Find SFML
-find_package(SFML 3.0 COMPONENTS Graphics Window System REQUIRED)
+# Find SFML (system-installed)
+find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 
 # Add executable
 add_executable(reaction_diffusion
@@ -38,14 +35,14 @@ set_target_properties(reaction_diffusion PROPERTIES
 # Include directories
 target_include_directories(reaction_diffusion PRIVATE
     ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/SFML-3.0.0/include
 )
 
-# Link SFML libraries
+# Link SFML and cuFFT libraries
 target_link_libraries(reaction_diffusion PRIVATE
-    SFML::Graphics
-    SFML::Window
-    SFML::System
+    sfml-graphics
+    sfml-window
+    sfml-system
+    cufft
 )
 
 # CUDA specific compiler flags
@@ -56,14 +53,7 @@ target_compile_options(reaction_diffusion PRIVATE
     >
 )
 
-# Set RPATH for SFML shared libraries
-set_target_properties(reaction_diffusion PROPERTIES
-    BUILD_RPATH "${CMAKE_SOURCE_DIR}/SFML-3.0.0/lib"
-    INSTALL_RPATH "${CMAKE_SOURCE_DIR}/SFML-3.0.0/lib"
-)
-
 # Print configuration info
 message(STATUS "CUDA Architectures: ${CMAKE_CUDA_ARCHITECTURES}")
-message(STATUS "SFML Directory: ${SFML_DIR}")
 message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "CUDA Standard: ${CMAKE_CUDA_STANDARD}")
