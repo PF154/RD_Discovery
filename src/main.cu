@@ -64,6 +64,12 @@ int main()
 
     sf::RectangleShape thumbnail(sf::Vector2f(75, 75));
 
+    // We want a visualization of where the user's cursor is
+    sf::RectangleShape hover_rect(sf::Vector2f(5, 5));
+    hover_rect.setFillColor(sf::Color::Transparent);
+    hover_rect.setOutlineColor(sf::Color(3, 252, 236));
+    hover_rect.setOutlineThickness(-1.0f);
+
     // Keep track of valid patterns
     // Eventually, this should be a more complex data structure
     std::vector<Vec4D> turing;
@@ -101,11 +107,13 @@ int main()
         ImGui::NextColumn();
 
         // Set up and display example color
+        bool valid_mouse = true;
         sf::Color thumbnailColor;
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         if (mousePos.y > 500 || mousePos.y < 0 || mousePos.x > 500 || mousePos.x < 0) 
         {
             thumbnailColor = sf::Color(0, 0, 0);
+            valid_mouse = false;
         }
         else
         {
@@ -133,7 +141,13 @@ int main()
         // Draw turing pattern hits
         for (const Vec4D& pos : turing)
         {
-            hit_rect.setPosition(pos.f * 500.0, pos.k * 500.0);
+            float scale_f = pos.f * 500.0f;
+            float scale_k = pos.k * 500.0f;
+
+            double justify_f = scale_f - std::fmod(scale_f, 5.0);
+            double justify_k = scale_k - std::fmod(scale_k, 5.0);
+
+            hit_rect.setPosition(justify_f, justify_k);
             window.draw(hit_rect);
         }
 
@@ -164,6 +178,15 @@ int main()
                 window.draw(circle);
                 window.draw(nose);
             }
+        }
+
+        if (valid_mouse)
+        {
+            float hover_x = mousePos.x - std::fmod(mousePos.x, 5.0);
+            float hover_y = mousePos.y - std::fmod(mousePos.y, 5.0);
+
+            hover_rect.setPosition(hover_x, hover_y);
+            window.draw(hover_rect);
         }
 
         ImGui::SFML::Render(window);
