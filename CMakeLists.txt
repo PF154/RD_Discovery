@@ -20,10 +20,20 @@ set(CMAKE_CUDA_ARCHITECTURES 75)
 # Find SFML (system-installed)
 find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 
-# Add executable
+# Find OpenGL (required by ImGui-SFML)
+find_package(OpenGL REQUIRED)
+
+# Add executable with ImGui source files
 add_executable(reaction_diffusion
     reaction_diffusion.cu
     definitions.cuh
+    # ImGui core files
+    external/imgui/imgui.cpp
+    external/imgui/imgui_draw.cpp
+    external/imgui/imgui_widgets.cpp
+    external/imgui/imgui_tables.cpp
+    # ImGui-SFML binding
+    external/imgui-sfml/imgui-SFML.cpp
 )
 
 # Set properties for CUDA files
@@ -35,13 +45,16 @@ set_target_properties(reaction_diffusion PROPERTIES
 # Include directories
 target_include_directories(reaction_diffusion PRIVATE
     ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/external/imgui
+    ${CMAKE_SOURCE_DIR}/external/imgui-sfml
 )
 
-# Link SFML and cuFFT libraries
+# Link SFML, OpenGL, and cuFFT libraries
 target_link_libraries(reaction_diffusion PRIVATE
     sfml-graphics
     sfml-window
     sfml-system
+    OpenGL::GL
     cufft
 )
 

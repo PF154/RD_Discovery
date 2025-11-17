@@ -9,6 +9,8 @@
 #include <algorithm>
 
 #include <SFML/Graphics.hpp>
+#include <imgui.h>
+#include <imgui-SFML.h>
 
 #include "definitions.cuh"
 
@@ -95,12 +97,23 @@ void write_ppm(const std::string& filename, const uint8_t* data, int width, int 
 int main()
 {
     // Create a 500x500 window
-    sf::RenderWindow window(sf::VideoMode(500, 500), "SFML Test Window");
+    sf::RenderWindow window(sf::VideoMode(500, 700), "SFML Test Window");
+
+    if (!ImGui::SFML::Init(window))
+    {
+        std::cerr << "Failed to initialize ImGui" << std::endl;
+        std::exit(1);
+    }
+    sf::Clock clock;
+
+    float R = 1.0f;
+    float G = 1.0f;
+    float B = 1.0f;
 
     // Create a green rectangle in the middle
-    sf::RectangleShape greenBox(sf::Vector2f(200.f, 200.f));
-    greenBox.setFillColor(sf::Color::Green);
-    greenBox.setPosition(150.f, 150.f);  // Center it (500-200)/2 = 150
+    sf::RectangleShape box(sf::Vector2f(200.f, 200.f));
+    box.setFillColor(sf::Color::Green);
+    box.setPosition(150.f, 150.f);  // Center it (500-200)/2 = 150
 
     // Main loop
     while (window.isOpen())
@@ -109,19 +122,41 @@ int main()
         sf::Event event;
         while (window.pollEvent(event))
         {
+            ImGui::SFML::ProcessEvent(window, event);
             if (event.type == sf::Event::Closed)
                 window.close();
         }
 
+        ImGui::SFML::Update(window, clock.restart());
+
+        // Lock ImGui to bottom of screen
+        ImGui::SetNextWindowPos(ImVec2(0, 500), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(500, 200), ImGuiCond_Always);
+
+        ImGuiWindowFlags flags  = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+        ImGui::Begin("Reaction Diffusion", nullptr, flags);
+
+        ImGui::SliderFloat("R", &R, 0.0f, 255.0f);
+        ImGui::SliderFloat("G", &G, 0.0f, 255.0f);
+        ImGui::SliderFloat("B", &B, 0.0f, 255.0f);
+
+        ImGui::End();
+
+
         // Clear window
         window.clear(sf::Color::Black);
 
-        // Draw the green box
-        window.draw(greenBox);
+        box.setFillColor(sf::Color(static_cast<uint8_t>(R), static_cast<uint8_t>(G), static_cast<uint8_t>(B)));
+
+        window.draw(box);
+
+        ImGui::SFML::Render(window);
 
         // Display
         window.display();
     }
+
+    ImGui::SFML::Shutdown();
 
     return 0;
 }
