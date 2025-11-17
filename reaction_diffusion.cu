@@ -114,6 +114,27 @@ struct Particle
     Vec4D dir;
 };
 
+bool is_periodic(Vec4D& position)
+{
+    // Eventually, this will do some better computation to determine
+    // if the parameters actually result in a turing pattern.
+    // For now, it will just return true 0.0001 percent of the time.
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> pos_dist(0.0, 1.0);
+
+    if (pos_dist(gen) < 0.0001) return true;
+    return false;
+}
+
+void scan_particle_positions(std::vector<Particle>& particles, std::vector<Vec4D>& turing)
+{  
+    for (Particle& particle: particles)
+    {
+        if (is_periodic(particle.pos)) turing.push_back(particle.pos);
+    }
+}
+
 void update_particle_positions(std::vector<Particle>& particles, const sf::Time& delta)
 {
     for (Particle& particle: particles)
@@ -176,7 +197,14 @@ int main()
         particles.emplace_back(Particle(position, speed, direction));
     }
 
+    // Particle visualisation geometry
     sf::CircleShape circle(2.5);
+    sf::RectangleShape hit_rect(sf::Vector2f(5, 5));
+    hit_rect.setFillColor(sf::Color::Green);
+
+    // Keep track of valid patterns
+    // Eventually, this should be a more complex data structure
+    std::vector<Vec4D> turing;
 
     // Main loop
     while (window.isOpen())
@@ -207,11 +235,19 @@ int main()
         ImGui::End();
 
         update_particle_positions(particles, delta);
+        scan_particle_positions(particles, turing);
 
         // Clear window
         window.clear(sf::Color::Black);
 
+        // Draw turing pattern hits
+        for (const Vec4D& pos : turing)
+        {
+            hit_rect.setPosition(pos.f * 500.0, pos.k * 500.0);
+            window.draw(hit_rect);
+        }
 
+        // Draw particles to screen
         sf::Color particle_color = sf::Color(static_cast<uint8_t>(R), static_cast<uint8_t>(G), static_cast<uint8_t>(B));
         circle.setFillColor(particle_color);
         for (const Particle& particle : particles)
