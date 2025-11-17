@@ -25,8 +25,17 @@ find_package(OpenGL REQUIRED)
 
 # Add executable with ImGui source files
 add_executable(reaction_diffusion
-    reaction_diffusion.cu
-    definitions.cuh
+    # Main application
+    src/main.cu
+    # Project source files
+    src/particle.cpp
+    src/rendering.cpp
+    src/cuda_kernels.cu
+    # Project headers
+    include/particle.h
+    include/rendering.h
+    include/cuda_kernels.cuh
+    include/definitions.cuh
     # ImGui core files
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp
@@ -44,9 +53,9 @@ set_target_properties(reaction_diffusion PROPERTIES
 
 # Include directories
 target_include_directories(reaction_diffusion PRIVATE
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/external/imgui
-    ${CMAKE_SOURCE_DIR}/external/imgui-sfml
+    ${CMAKE_SOURCE_DIR}/include              # Project headers
+    ${CMAKE_SOURCE_DIR}/external/imgui       # ImGui headers
+    ${CMAKE_SOURCE_DIR}/external/imgui-sfml  # ImGui-SFML headers
 )
 
 # Link SFML, OpenGL, and cuFFT libraries
