@@ -27,6 +27,8 @@ int main()
     float G = 200.0f;
     float B = 100.0f;
 
+    bool display_particles = true;
+
     // Create and set up particles.
     constexpr int num_particles = 400;
     std::vector<Particle> particles;
@@ -55,6 +57,13 @@ int main()
     sf::RectangleShape hit_rect(sf::Vector2f(5, 5));
     hit_rect.setFillColor(sf::Color::Green);
 
+    // We want a texture to display a thumbnail of discovered patterns
+    // For now it will just display a color based on cursor position
+    sf::RenderTexture thumbnailTexture;
+    thumbnailTexture.create(75, 75);
+
+    sf::RectangleShape thumbnail(sf::Vector2f(75, 75));
+
     // Keep track of valid patterns
     // Eventually, this should be a more complex data structure
     std::vector<Vec4D> turing;
@@ -81,9 +90,37 @@ int main()
         ImGuiWindowFlags flags  = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
         ImGui::Begin("Reaction Diffusion", nullptr, flags);
 
+        ImGui::Columns(2, "columns");
+
         ImGui::SliderFloat("R", &R, 0.0f, 255.0f);
         ImGui::SliderFloat("G", &G, 0.0f, 255.0f);
         ImGui::SliderFloat("B", &B, 0.0f, 255.0f);
+
+        ImGui::Checkbox("Display Particles", &display_particles);
+
+        ImGui::NextColumn();
+
+        // Set up and display example color
+        sf::Color thumbnailColor;
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        if (mousePos.y > 500 || mousePos.y < 0 || mousePos.x > 500 || mousePos.x < 0) 
+        {
+            thumbnailColor = sf::Color(0, 0, 0);
+        }
+        else
+        {
+            float norm_x = mousePos.x / 500.0f;
+            float norm_y = mousePos.y / 500.0f;
+            thumbnailColor = sf::Color(
+                static_cast<sf::Uint32>(norm_x * 255),
+                static_cast<sf::Uint32>(norm_y * 255), 
+                static_cast<sf::Uint32>(255)
+            );
+        }
+
+        thumbnail.setFillColor(thumbnailColor);
+        thumbnailTexture.draw(thumbnail);
+        ImGui::Image(thumbnailTexture, sf::Vector2f(75, 75));
 
         ImGui::End();
 
@@ -100,30 +137,33 @@ int main()
             window.draw(hit_rect);
         }
 
-        // Draw particles to screen
-        sf::Color particle_color = sf::Color(static_cast<uint8_t>(R), static_cast<uint8_t>(G), static_cast<uint8_t>(B));
-        circle.setFillColor(particle_color);
-        for (const Particle& particle : particles)
+        if (display_particles)
         {
-            circle.setPosition(particle.pos.f * 500.0 - 2.5, particle.pos.k * 500.0 - 2.5);
+            // Draw particles to screen
+            sf::Color particle_color = sf::Color(static_cast<uint8_t>(R), static_cast<uint8_t>(G), static_cast<uint8_t>(B));
+            circle.setFillColor(particle_color);
+            for (const Particle& particle : particles)
+            {
+                circle.setPosition(particle.pos.f * 500.0 - 2.5, particle.pos.k * 500.0 - 2.5);
 
-            // Normalize directions before drawing noses for consistent length
-            double dir_magnitude = std::sqrt(
-                particle.dir.f * particle.dir.f + particle.dir.k * particle.dir.k
-            );
-            double norm_f = particle.dir.f / dir_magnitude;
-            double norm_k = particle.dir.k / dir_magnitude;
+                // Normalize directions before drawing noses for consistent length
+                double dir_magnitude = std::sqrt(
+                    particle.dir.f * particle.dir.f + particle.dir.k * particle.dir.k
+                );
+                double norm_f = particle.dir.f / dir_magnitude;
+                double norm_k = particle.dir.k / dir_magnitude;
 
-            auto nose = create_line(
-                sf::Vector2f(particle.pos.f * 500.0, particle.pos.k * 500.0),
-                sf::Vector2f(
-                    particle.pos.f * 500.0 + norm_f * 10,
-                    particle.pos.k * 500.0 + norm_k * 10
-                ),
-                particle_color
-            );
-            window.draw(circle);
-            window.draw(nose);
+                auto nose = create_line(
+                    sf::Vector2f(particle.pos.f * 500.0, particle.pos.k * 500.0),
+                    sf::Vector2f(
+                        particle.pos.f * 500.0 + norm_f * 10,
+                        particle.pos.k * 500.0 + norm_k * 10
+                    ),
+                    particle_color
+                );
+                window.draw(circle);
+                window.draw(nose);
+            }
         }
 
         ImGui::SFML::Render(window);
