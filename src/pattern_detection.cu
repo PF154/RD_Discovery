@@ -128,6 +128,19 @@ __global__ void compute_temporal_difference(
     // On host or in another kernel, divide by (Nx*Ny) and take sqrt
 }
 
+__global__ void compute_power_spectrum(
+    const cufftDoubleComplex* freq_data,
+    double* power_data,
+    int total_elements
+)
+{
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= total_elements) return;
+
+    cufftDoubleComplex c = freq_data[idx];
+    power_data[idx] = c.x * c.x + c.y * c.y;
+}
+
 __global__ void analyze_power_spectrum(
     const double* power_spectrum,
     PatternResult* results,
@@ -234,10 +247,216 @@ std::vector<PatternResult> detect_patterns_batch(
     initialize_fields<<<blocks, threads>>>(d_u_ping, d_v_ping, num_particles, Nx, Ny);
     gpuErrchk(cudaDeviceSynchronize());
 
-    
+    // =========================================================================
+    // PHASE 2: Run initial simulation (pattern formation)
+    // =========================================================================
+
+    for (int i = 0; i < INITIAL_TIMESTEPS; i++)
+    {
+        compute_time_step_batch<<<blocks, threads>>>(
+            d_u_ping, 
+            d_v_ping,
+            d_u_pong,
+            d_v_pong,
+            d_params,
+            num_particles,
+            Nx,
+            Ny
+        );
+
+        // Swap pointers
+        std::swap(d_u_ping, d_u_pong);
+        std::swap(d_v_ping, d_v_pong);
+    }
+
+    // =========================================================================
+    // PHASE 3: Save snapshot
+    // =========================================================================
+
+    gpuErrchk(cudaMemcpy(
+        d_u_snapshot,
+        d_u_ping,
+        sizeof(double) * total_size,
+        cudaMemcpyDeviceToDevice
+    ));
+
+    gpuErrchk(cudaMemcpy(
+        d_v_snapshot,
+        d_v_ping,
+        sizeof(double) * total_size,
+        cudaMemcpyDeviceToDevice
+    ));
+
+    // =========================================================================
+    // PHASE 4: Run extended simulation (stability check)
+    // =========================================================================
+
+    for (int i = 0; i < STABILITY_TIMESTEPS; i++)
+    {
+        compute_time_step_batch<<<blocks, threads>>>(
+            d_u_ping, 
+            d_v_ping,
+            d_u_pong,
+            d_v_pong,
+            d_params,
+            num_particles,
+            Nx,
+            Ny
+        );
+
+        // Swap pointers
+        std::swap(d_u_ping, d_u_pong);
+        std::swap(d_v_ping, d_v_pong);
+    }
+
+    // =========================================================================
+    // PHASE 5: Compute temporal difference
+    // =========================================================================
+
+    compute_temporal_difference<<<blocks, threads>>>(
+        d_u_ping,
+        d_u_snapshot,
+        d_rms_diff,
+        num_particles,
+        Nx,
+        Ny
+    );
+
+    // Copy RMS differences to host and finalize
+    std::vector<double> h_rms_diff(num_particles);
+    gpuErrchk(cudaMemcpy(
+        h_rms_diff.data(),
+        d_rms_diff,
+        sizeof(double) * num_particles,
+        cudaMemcpyDeviceToHost
+    ));
+
+    // Finalize RMS: divide by grid_size and take sqrt
+    for (int i = 0; i < num_particles; i++) {
+        h_rms_diff[i] = sqrt(h_rms_diff[i] / grid_size);
+    }
+
+    // =========================================================================
+    // PHASE 6: FFT analysis
+    // =========================================================================
+
+    // TODO: Allocate d_freq (complex output) and d_power (power spectrum)
+    cufftDoubleComplex* d_freq;
+    double* d_power;
+    gpuErrchk(cudaMalloc(
+        &d_freq, 
+        sizeof(cufftDoubleComplex) * num_particles * Nx * (Ny/2 + 1)
+    ));
+    gpuErrchk(cudaMalloc(
+        &d_power, 
+        sizeof(double) * num_particles * Nx * (Ny/2 + 1)
+    ));
+
+    // TODO: Create batched FFT plan using cufftPlanMany
+    cufftHandle plan;
+    int rank = 2;
+    int n[] = {Ny, Nx};
+
+    // Input embedding
+    int inembed[] = {Ny, Nx};
+    int istride = 1;
+    int idist = Nx * Ny;
+
+    // Output embedding
+    int onembed[] = {Ny, Nx/2 + 1};
+    int ostride = 1;
+    int odist = Nx * (Ny/2 + 1);
+
+    int batch = num_particles;
+
+    cufftPlanMany(&plan, rank, n, inembed, istride, idist, onembed,
+        ostride, odist, CUFFT_D2Z,batch);
+
+    // Execute batched FFT
+    cufftExecD2Z(plan, d_u_ping, d_freq);
+
+    // Compute power spectrum: |freq|^2
+    // This is a 1D kernel processing all frequency elements
+    int freq_size = num_particles * Nx * (Ny/2 + 1);
+    int freq_threads = 256;
+    int freq_blocks = (freq_size + freq_threads - 1) / freq_threads;
+    compute_power_spectrum<<<freq_blocks, freq_threads>>>(d_freq, d_power, freq_size);
+
+
+    // =========================================================================
+    // PHASE 7: Analyze power spectrum
+    // =========================================================================
+
+    PatternResult* d_results;
+    gpuErrchk(cudaMalloc(&d_results, sizeof(PatternResult) * num_particles));
+
+    // Analyze power spectrum: one thread per particle
+    int power_threads = 256;
+    int power_blocks = (num_particles + power_threads - 1) / power_threads;
+    analyze_power_spectrum<<<power_blocks, power_threads>>>(
+        d_power, d_results, num_particles, Nx, (Ny/2 + 1));
+
+    // =========================================================================
+    // PHASE 8: Classify and copy results back
+    // =========================================================================
+
+    std::vector<PatternResult> results(num_particles);
+    gpuErrchk(cudaMemcpy(results.data(), d_results, sizeof(PatternResult) * num_particles, 
+        cudaMemcpyDeviceToHost));
+
+    // Fill pattern structs
+    for (int i = 0; i < num_particles; i++)
+    {
+        results[i].params = param_sets[i];
+        results[i].temporal_change = h_rms_diff[i];
+        if (results[i].spatial_ratio > SPATIAL_RATIO_THRESHOLD
+            && results[i].temporal_change < TEMPORAL_CHANGE_THRESHOLD)
+        {
+            results[i].classification = PatternType::TURING_PATTERN;
+        }
+        else if (results[i].spatial_ratio > SPATIAL_RATIO_THRESHOLD)
+        {
+            results[i].classification = PatternType::OSCILLATING_PATTERN;
+        }
+        else
+        {
+            results[i].classification = PatternType::NO_PATTERN;
+        }
+
+        if (results[i].classification != PatternType::NO_PATTERN)
+        {
+            results[i].u_final.resize(grid_size);
+            results[i].v_final.resize(grid_size);
+            gpuErrchk(cudaMemcpy(
+                results[i].u_final.data(),
+                d_u_ping + i * grid_size,
+                sizeof(double) * grid_size,
+                cudaMemcpyDeviceToHost
+            ));
+            gpuErrchk(cudaMemcpy(
+                results[i].v_final.data(),
+                d_v_ping + i * grid_size,
+                sizeof(double) * grid_size,
+                cudaMemcpyDeviceToHost
+            ));
+        }
+    }
+
+    // Clean up device memory
+    gpuErrchk(cudaFree(d_u_ping));
+    gpuErrchk(cudaFree(d_v_ping));
+    gpuErrchk(cudaFree(d_u_pong));
+    gpuErrchk(cudaFree(d_v_pong));
+    gpuErrchk(cudaFree(d_u_snapshot));
+    gpuErrchk(cudaFree(d_v_snapshot));
+    gpuErrchk(cudaFree(d_params));
+    gpuErrchk(cudaFree(d_rms_diff));
+    gpuErrchk(cudaFree(d_freq));
+    gpuErrchk(cudaFree(d_power));
+    gpuErrchk(cudaFree(d_results));
+    cufftDestroy(plan);
 
     // Placeholder return
-    std::vector<PatternResult> results;
     return results;
 }
 
