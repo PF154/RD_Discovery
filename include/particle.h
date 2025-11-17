@@ -25,4 +25,4 @@ struct Particle
 // Particle system functions
 bool is_periodic(Vec4D& position);
 void scan_particle_positions(std::vector<Particle>& particles, std::vector<Vec4D>& turing);
-void update_particle_positions(std::vector<Particle>& particles, const sf::Time& delta);
+void update_particle_positions(std::vector<Particle>& particles, std::vector<Vec4D>& wells, const sf::Time& delta);

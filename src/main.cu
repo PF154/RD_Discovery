@@ -37,7 +37,7 @@ int main()
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> pos_dist(0.0, 1.0);
     std::uniform_real_distribution<double> dir_dist(-1.0, 1.0);
-    std::uniform_real_distribution<double> speed_dist(0.25, 0.5);
+    std::uniform_real_distribution<double> speed_dist(0.15, 0.25);
 
 
     for (int i = 0; i < num_particles; i++)
@@ -87,7 +87,7 @@ int main()
 
         ImGui::End();
 
-        update_particle_positions(particles, delta);
+        update_particle_positions(particles, turing, delta);
         scan_particle_positions(particles, turing);
 
         // Clear window
