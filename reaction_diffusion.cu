@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <vector>
 #include <random>
 #include <fstream>
 #include <string>
@@ -94,6 +95,48 @@ void write_ppm(const std::string& filename, const uint8_t* data, int width, int 
     out.close();
 }
 
+struct Vec4D
+{
+    Vec4D(double f, double k, double du, double dv) 
+        : f(f), k(k), du(du), dv(dv) {};
+    double f = 0.0;
+    double k = 0.0;
+    double du = 0.0;
+    double dv = 0.0;
+};
+
+struct Particle
+{
+    Particle(Vec4D pos, double speed, Vec4D dir)
+        : pos(pos), speed(speed), dir(dir) {};
+    Vec4D pos;
+    double speed;
+    Vec4D dir;
+};
+
+void update_particle_positions(std::vector<Particle>& particles, const sf::Time& delta)
+{
+    for (Particle& particle: particles)
+    {
+        particle.pos.f += particle.dir.f * particle.speed * delta.asSeconds();
+        particle.pos.k += particle.dir.k * particle.speed * delta.asSeconds();
+
+        // Perioidic
+        particle.pos.f = std::fmod(particle.pos.f + 1.0, 1.0);
+        particle.pos.k = std::fmod(particle.pos.k + 1.0, 1.0);
+    }
+}
+
+// Helper function to draw particle noses
+sf::VertexArray create_line(sf::Vector2f start, sf::Vector2f end, sf::Color color)
+{
+    sf::VertexArray line(sf::Lines, 2);
+    line[0] = sf::Vertex(start, color);
+    line[1] = sf::Vertex(end, color);
+    return line;
+}
+
+
 int main()
 {
     // Create a 500x500 window
@@ -106,14 +149,34 @@ int main()
     }
     sf::Clock clock;
 
-    float R = 1.0f;
-    float G = 1.0f;
-    float B = 1.0f;
+    float R = 100.0f;
+    float G = 200.0f;
+    float B = 100.0f;
 
-    // Create a green rectangle in the middle
-    sf::RectangleShape box(sf::Vector2f(200.f, 200.f));
-    box.setFillColor(sf::Color::Green);
-    box.setPosition(150.f, 150.f);  // Center it (500-200)/2 = 150
+    // Create and set up particles.
+    constexpr int num_particles = 400;
+    std::vector<Particle> particles;
+    particles.reserve(num_particles);
+
+    // set up random engine
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> pos_dist(0.0, 1.0);
+    std::uniform_real_distribution<double> dir_dist(-1.0, 1.0);    
+    std::uniform_real_distribution<double> speed_dist(0.25, 0.5);    
+    
+
+    for (int i = 0; i < num_particles; i++)
+    {
+        double f = pos_dist(gen);
+        double k = pos_dist(gen);
+        Vec4D position = Vec4D(f, k, 0.0, 0.0);
+        double speed = speed_dist(gen);
+        Vec4D direction = Vec4D(dir_dist(gen), dir_dist(gen), 0.0, 0.0);
+        particles.emplace_back(Particle(position, speed, direction));
+    }
+
+    sf::CircleShape circle(2.5);
 
     // Main loop
     while (window.isOpen())
@@ -127,7 +190,8 @@ int main()
                 window.close();
         }
 
-        ImGui::SFML::Update(window, clock.restart());
+        sf::Time delta = clock.restart();
+        ImGui::SFML::Update(window, delta);
 
         // Lock ImGui to bottom of screen
         ImGui::SetNextWindowPos(ImVec2(0, 500), ImGuiCond_Always);
@@ -142,13 +206,36 @@ int main()
 
         ImGui::End();
 
+        update_particle_positions(particles, delta);
 
         // Clear window
         window.clear(sf::Color::Black);
 
-        box.setFillColor(sf::Color(static_cast<uint8_t>(R), static_cast<uint8_t>(G), static_cast<uint8_t>(B)));
 
-        window.draw(box);
+        sf::Color particle_color = sf::Color(static_cast<uint8_t>(R), static_cast<uint8_t>(G), static_cast<uint8_t>(B));
+        circle.setFillColor(particle_color);
+        for (const Particle& particle : particles)
+        {
+            circle.setPosition(particle.pos.f * 500.0 - 2.5, particle.pos.k * 500.0 - 2.5);
+
+            // Normalize directions before drawing noses for consisten length
+            double dir_magnitude = std::sqrt(
+                particle.dir.f * particle.dir.f + particle.dir.k * particle.dir.k
+            );
+            double norm_f = particle.dir.f / dir_magnitude;
+            double norm_k = particle.dir.k / dir_magnitude;
+
+            auto nose = create_line(
+                sf::Vector2f(particle.pos.f * 500.0, particle.pos.k * 500.0),
+                sf::Vector2f(
+                    particle.pos.f * 500.0 + norm_f * 10,
+                    particle.pos.k * 500.0 + norm_k * 10
+                ),
+                particle_color
+            );
+            window.draw(circle);
+            window.draw(nose);
+        }
 
         ImGui::SFML::Render(window);
 
