@@ -15,7 +15,7 @@
 int main()
 {
     // Create a 1000x1000 window
-    sf::RenderWindow window(sf::VideoMode(1300, 1000), "SFML Test Window");
+    sf::RenderWindow window(sf::VideoMode(1300, 1000), "Turing Pattern Discovery");
 
     if (!ImGui::SFML::Init(window))
     {
@@ -29,6 +29,10 @@ int main()
     float B = 100.0f;
 
     bool display_particles = true;
+    bool display_axes = true;
+
+    float du = 0.16;
+    float dv = 0.08;
 
     // Create and set up particles.
     constexpr int num_particles = 400;
@@ -65,9 +69,9 @@ int main()
     // We want a texture to display a thumbnail of discovered patterns
     // For now it will just display a color based on cursor position
     sf::RenderTexture thumbnailTexture;
-    thumbnailTexture.create(150, 150);
+    thumbnailTexture.create(100, 100);
 
-    sf::RectangleShape thumbnail(sf::Vector2f(150, 150));
+    sf::RectangleShape thumbnail(sf::Vector2f(250, 250));
 
     // We want a visualization of where the user's cursor is
     sf::RectangleShape hover_rect(sf::Vector2f(10, 10));
@@ -132,7 +136,11 @@ int main()
         ImGui::SliderFloat("G", &G, 0.0f, 255.0f);
         ImGui::SliderFloat("B", &B, 0.0f, 255.0f);
 
-        ImGui::Checkbox("Display Particles", &display_particles);
+        ImGui::SliderFloat("Du", &du, 0.0f, 1.0f);
+        ImGui::SliderFloat("Dv", &dv, 0.0f, 1.0f);
+
+        ImGui::Checkbox("Particles", &display_particles);
+        ImGui::Checkbox("Axes", &display_axes);
 
         // ImGui::NextColumn();
 
@@ -156,9 +164,25 @@ int main()
             );
         }
 
+        // Add any other widgets here
+
+        // Add any other widgets above here
+
+        // Image should be the last widget we add
         thumbnail.setFillColor(thumbnailColor);
         thumbnailTexture.draw(thumbnail);
-        ImGui::Image(thumbnailTexture, sf::Vector2f(150, 150));
+
+        float available_width = ImGui::GetContentRegionAvail().x;
+        float available_height = ImGui::GetContentRegionAvail().y;
+        float offset_x = (available_width - 250) * 0.5f;
+        float offset_y = (available_height - 275);
+
+        if (offset_x > 0.0f) 
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset_x);
+        if (offset_x > 0.0f)
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + offset_y);
+
+        ImGui::Image(thumbnailTexture, sf::Vector2f(250, 250));
 
         ImGui::End();
 
@@ -217,6 +241,8 @@ int main()
             hover_rect.setPosition(hover_x, hover_y);
             window.draw(hover_rect);
         }
+
+        if (display_axes) draw_axes(window);
 
         ImGui::SFML::Render(window);
 

@@ -60,8 +60,9 @@ void update_particle_positions(
 {
     for (Particle& particle: particles)
     {
-        double well_strength = 0.001;
-        double max_influence = 7.0;
+        double well_strength = 0.00001;
+        double max_influence = 4.5;
+        double max_cumulative_influence = 10.0;
         Vec4D influence(0.0, 0.0, 0.0, 0.0);
 
         // We want some randomness in particle direction to avoid getting stuck
@@ -81,12 +82,12 @@ void update_particle_positions(
             double safe_distance = std::max(distance, 0.01);  // Prevent division by near-zero
             double influence_magnitude = std::min(
                 max_influence,
-                well_strength / std::pow(safe_distance, 2)
+                well_strength / std::pow(safe_distance, 3)
             );
-            influence.f += -df * influence_magnitude;
-            influence.k += -dk * influence_magnitude;
-            influence.du += -ddu * influence_magnitude;
-            influence.dv += -ddv * influence_magnitude;
+            influence.f = std::min(influence.f - df * influence_magnitude, max_cumulative_influence);
+            influence.k = std::min(influence.f - dk * influence_magnitude, max_cumulative_influence);
+            influence.du = std::min(influence.f - ddu * influence_magnitude, max_cumulative_influence);
+            influence.dv = std::min(influence.f - ddv * influence_magnitude, max_cumulative_influence);
         }
 
         particle.dir.f += influence.f + random_influence.f;

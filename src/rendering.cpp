@@ -10,6 +10,14 @@ sf::VertexArray create_line(sf::Vector2f start, sf::Vector2f end, sf::Color colo
     return line;
 }
 
+void draw_axes(sf::RenderWindow& window)
+{
+    sf::VertexArray f_axis = create_line(sf::Vector2f(3, 3), sf::Vector2f(1000, 3), sf::Color::White);
+    window.draw(f_axis);
+    sf::VertexArray k_axis = create_line(sf::Vector2f(3, 3), sf::Vector2f(3, 1000), sf::Color::White);
+    window.draw(k_axis);
+}
+
 void write_ppm(const std::string& filename, const uint8_t* data, int width, int height) {
     std::ofstream out(filename, std::ios::binary);
     if (!out) {
