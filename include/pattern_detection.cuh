@@ -13,8 +13,8 @@ constexpr int INITIAL_TIMESTEPS = 5000;   // Pattern formation
 constexpr int STABILITY_TIMESTEPS = 2500; // Temporal stability check
 
 // Analysis thresholds (tune these after testing!)
-constexpr double SPATIAL_RATIO_THRESHOLD = 10.0;  // Peak power / average power
-constexpr double TEMPORAL_CHANGE_THRESHOLD = 0.01; // RMS difference threshold
+constexpr double SPATIAL_RATIO_THRESHOLD = 25.0;  // Peak power / average power
+constexpr double TEMPORAL_CHANGE_THRESHOLD = 0.1; // RMS difference threshold
 constexpr int MIN_WAVE_NUMBER = 3;   // Minimum spatial frequency to consider
 constexpr int MAX_WAVE_NUMBER = 25;  // Maximum spatial frequency to consider
 
@@ -108,17 +108,4 @@ __global__ void analyze_power_spectrum(
 // Run the full pattern detection pipeline on a batch of parameter sets
 std::vector<PatternResult> detect_patterns_batch(
     const std::vector<ParamSet>& param_sets
-);
-
-// Export results to CSV file
-void export_results_csv(
-    const std::vector<PatternResult>& results,
-    const std::string& filename
-);
-
-// Export pattern images to PPM files
-void export_pattern_images(
-    const PatternResult& result,
-    const std::string& output_dir,
-    int pattern_index
 );

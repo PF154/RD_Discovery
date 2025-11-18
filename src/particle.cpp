@@ -1,25 +1,60 @@
 #include "particle.h"
+#include "pattern_detection.cuh"
 #include <random>
 #include <cmath>
 
-bool is_periodic(Vec4D& position)
-{
-    // Eventually, this will do some better computation to determine
-    // if the parameters actually result in a turing pattern.
-    // For now, it will just return true 0.000001 percent of the time.
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<double> pos_dist(0.0, 1.0);
-
-    if (pos_dist(gen) < 0.00001) return true;
-    return false;
-}
-
 void scan_particle_positions(std::vector<Particle>& particles, std::vector<Vec4D>& turing)
 {
-    for (Particle& particle: particles)
-    {
-        if (is_periodic(particle.pos)) turing.push_back(particle.pos);
+    int batch_size = 25;
+    std::vector<size_t> indices(particles.size());
+    std::iota(indices.begin(), indices.end(), 0);
+
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+
+    for (size_t i = 0; i < batch_size; i++) {
+        std::uniform_int_distribution<size_t> dist(i, particles.size() - 1);
+        size_t j = dist(gen);
+        std::swap(indices[i], indices[j]);
+    }
+
+    std::vector<Particle*> batch_to_test;
+    batch_to_test.reserve(batch_size);
+    for (size_t i = 0; i < batch_size; i++) {
+        batch_to_test.push_back(&particles[indices[i]]);
+    }
+
+    // Skip if no particles to test
+    if (batch_to_test.empty()) return;
+
+    // Assemble ParamSet vector from selected particles
+    std::vector<ParamSet> param_batch;
+    param_batch.reserve(batch_to_test.size());
+
+    for (const auto* particle : batch_to_test) {
+        param_batch.emplace_back(ParamSet{
+            particle->pos.f,
+            particle->pos.k,
+            particle->pos.du,
+            particle->pos.dv,
+            0.25,  // dx
+            1.0    // dt
+        });
+    }
+
+    // Run pattern detection pipeline
+    std::vector<PatternResult> results = detect_patterns_batch(param_batch);
+
+    // Convert oscillating patterns to Vec4D and add to turing vector
+    for (const auto& result : results) {
+        if (result.classification == PatternType::OSCILLATING_PATTERN) {
+            turing.emplace_back(
+                result.params.f,
+                result.params.k,
+                result.params.du,
+                result.params.dv
+            );
+        }
     }
 }
 

@@ -30,12 +30,12 @@ add_executable(reaction_diffusion
     # Project source files
     src/particle.cpp
     src/rendering.cpp
-    src/cuda_kernels.cu
+    src/pattern_detection.cu
     # Project headers
     include/particle.h
     include/rendering.h
-    include/cuda_kernels.cuh
     include/definitions.cuh
+    include/pattern_detection.cuh
     # ImGui core files
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp

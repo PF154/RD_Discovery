@@ -1,11 +1,6 @@
-#include "pattern_detection.cuh"
-#include "definitions.cuh"  // For gpuErrchk macro
-#include "rendering.h"      // For write_ppm function
+#include "../include/pattern_detection.cuh"
+#include "../include/definitions.cuh"  // For gpuErrchk macro
 #include <cmath>
-#include <algorithm>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
 
 // =============================================================================
 // DEVICE HELPER FUNCTIONS
@@ -458,35 +453,4 @@ std::vector<PatternResult> detect_patterns_batch(
 
     // Placeholder return
     return results;
-}
-
-// =============================================================================
-// HOST FUNCTIONS: Export
-// =============================================================================
-
-void export_results_csv(
-    const std::vector<PatternResult>& results,
-    const std::string& filename
-) {
-    // TODO: Open file
-    // TODO: Write CSV header
-    // TODO: Write one row per result with all metrics
-    // TODO: Close file
-}
-
-void export_pattern_images(
-    const PatternResult& result,
-    const std::string& output_dir,
-    int pattern_index
-) {
-    // TODO: Check if pattern was found (u_final not empty)
-
-    // TODO: Create filename based on parameters and index
-    // Example: "pattern_042_f0.030_k0.055_u.ppm"
-
-    // TODO: Convert u_final vector to uint8_t array (scale 0.0-1.0 to 0-255)
-
-    // TODO: Use write_ppm() from rendering.h to save image
-
-    // TODO: Repeat for v_final
 }

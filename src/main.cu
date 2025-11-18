@@ -9,7 +9,7 @@
 
 #include "particle.h"
 #include "rendering.h"
-#include "cuda_kernels.cuh"
+#include "pattern_detection.cuh"
 
 int main()
 {
@@ -46,7 +46,7 @@ int main()
     {
         double f = pos_dist(gen);
         double k = pos_dist(gen);
-        Vec4D position = Vec4D(f, k, 0.0, 0.0);
+        Vec4D position = Vec4D(f, k, 0.16, 0.08);
         double speed = speed_dist(gen);
         Vec4D direction = Vec4D(dir_dist(gen), dir_dist(gen), 0.0, 0.0);
         particles.emplace_back(Particle(position, speed, direction));
