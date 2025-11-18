@@ -1,6 +1,8 @@
 #include "rendering.h"
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 
 sf::VertexArray create_line(sf::Vector2f start, sf::Vector2f end, sf::Color color)
 {
@@ -10,12 +12,103 @@ sf::VertexArray create_line(sf::Vector2f start, sf::Vector2f end, sf::Color colo
     return line;
 }
 
-void draw_axes(sf::RenderWindow& window)
+void draw_axes(sf::RenderWindow& window, float min_f, float max_f, float min_k, float max_k)
 {
-    sf::VertexArray f_axis = create_line(sf::Vector2f(3, 3), sf::Vector2f(1000, 3), sf::Color::White);
+    const float AXIS_SIZE = 1000.0f;
+    const float AXIS_OFFSET = 10.0f;
+    const int NUM_TICKS = 10;
+    const float TICK_LENGTH = 10.0f;
+
+    // Draw main axes
+    sf::VertexArray f_axis = create_line(
+        sf::Vector2f(AXIS_OFFSET, AXIS_OFFSET),
+        sf::Vector2f(AXIS_SIZE, AXIS_OFFSET),
+        sf::Color::White
+    );
     window.draw(f_axis);
-    sf::VertexArray k_axis = create_line(sf::Vector2f(3, 3), sf::Vector2f(3, 1000), sf::Color::White);
+
+    sf::VertexArray k_axis = create_line(
+        sf::Vector2f(AXIS_OFFSET, AXIS_OFFSET),
+        sf::Vector2f(AXIS_OFFSET, AXIS_SIZE),
+        sf::Color::White
+    );
     window.draw(k_axis);
+
+    // Load font (static to load only once)
+    static sf::Font font;
+    static bool font_loaded = false;
+    if (!font_loaded) {
+        // Try common font paths (Linux, then Windows)
+        if (font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf") ||
+            font.loadFromFile("/usr/share/fonts/TTF/DejaVuSans.ttf") ||
+            font.loadFromFile("C:\\Windows\\Fonts\\arial.ttf")) {
+            font_loaded = true;
+        }
+    }
+
+    // Draw f-axis ticks (vertical ticks along horizontal axis at top)
+    for (int i = 0; i <= NUM_TICKS; i++) {
+        float t = static_cast<float>(i) / NUM_TICKS;
+        float x = AXIS_OFFSET + t * (AXIS_SIZE - AXIS_OFFSET);
+        float f_value = min_f + t * (max_f - min_f);
+
+        // Draw tick mark (pointing down)
+        sf::VertexArray tick = create_line(
+            sf::Vector2f(x, AXIS_OFFSET),
+            sf::Vector2f(x, AXIS_OFFSET + TICK_LENGTH),
+            sf::Color::White
+        );
+        window.draw(tick);
+
+        // Draw label
+        if (font_loaded) {
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2) << f_value;
+
+            sf::Text label;
+            label.setFont(font);
+            label.setString(oss.str());
+            label.setCharacterSize(10);
+            label.setFillColor(sf::Color::White);
+
+            // Center the text below the tick
+            sf::FloatRect bounds = label.getLocalBounds();
+            label.setPosition(x - bounds.width / 2, AXIS_OFFSET + TICK_LENGTH + 2);
+            window.draw(label);
+        }
+    }
+
+    // Draw k-axis ticks (horizontal ticks along vertical axis on left)
+    for (int i = 0; i <= NUM_TICKS; i++) {
+        float t = static_cast<float>(i) / NUM_TICKS;
+        float y = AXIS_OFFSET + t * (AXIS_SIZE - AXIS_OFFSET);
+        float k_value = min_k + t * (max_k - min_k);
+
+        // Draw tick mark (pointing right)
+        sf::VertexArray tick = create_line(
+            sf::Vector2f(AXIS_OFFSET, y),
+            sf::Vector2f(AXIS_OFFSET + TICK_LENGTH, y),
+            sf::Color::White
+        );
+        window.draw(tick);
+
+        // Draw label
+        if (font_loaded) {
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2) << k_value;
+
+            sf::Text label;
+            label.setFont(font);
+            label.setString(oss.str());
+            label.setCharacterSize(10);
+            label.setFillColor(sf::Color::White);
+
+            // Position to the right of the axis
+            sf::FloatRect bounds = label.getLocalBounds();
+            label.setPosition(AXIS_OFFSET - bounds.width + 45, y - bounds.height / 2 - 2);
+            window.draw(label);
+        }
+    }
 }
 
 void write_ppm(const std::string& filename, const uint8_t* data, int width, int height) {

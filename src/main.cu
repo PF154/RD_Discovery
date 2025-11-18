@@ -242,7 +242,7 @@ int main()
             window.draw(hover_rect);
         }
 
-        if (display_axes) draw_axes(window);
+        if (display_axes) draw_axes(window, 0.0f, 1.0f, 0.0f, 1.0f);
 
         ImGui::SFML::Render(window);
 
