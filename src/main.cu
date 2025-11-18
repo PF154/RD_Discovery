@@ -14,8 +14,8 @@
 
 int main()
 {
-    // Create a 500x500 window
-    sf::RenderWindow window(sf::VideoMode(500, 700), "SFML Test Window");
+    // Create a 1000x1000 window
+    sf::RenderWindow window(sf::VideoMode(1300, 1000), "SFML Test Window");
 
     if (!ImGui::SFML::Init(window))
     {
@@ -40,7 +40,7 @@ int main()
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> pos_dist(0.0, 1.0);
     std::uniform_real_distribution<double> dir_dist(-1.0, 1.0);
-    std::uniform_real_distribution<double> speed_dist(0.15, 0.25);
+    std::uniform_real_distribution<double> speed_dist(0.05, 0.15);
 
 
     for (int i = 0; i < num_particles; i++)
@@ -59,18 +59,18 @@ int main()
 
     // Particle visualisation geometry
     sf::CircleShape circle(2.5);
-    sf::RectangleShape hit_rect(sf::Vector2f(5, 5));
+    sf::RectangleShape hit_rect(sf::Vector2f(10, 10));
     hit_rect.setFillColor(sf::Color::Green);
 
     // We want a texture to display a thumbnail of discovered patterns
     // For now it will just display a color based on cursor position
     sf::RenderTexture thumbnailTexture;
-    thumbnailTexture.create(75, 75);
+    thumbnailTexture.create(150, 150);
 
-    sf::RectangleShape thumbnail(sf::Vector2f(75, 75));
+    sf::RectangleShape thumbnail(sf::Vector2f(150, 150));
 
     // We want a visualization of where the user's cursor is
-    sf::RectangleShape hover_rect(sf::Vector2f(5, 5));
+    sf::RectangleShape hover_rect(sf::Vector2f(10, 10));
     hover_rect.setFillColor(sf::Color::Transparent);
     hover_rect.setOutlineColor(sf::Color(3, 252, 236));
     hover_rect.setOutlineThickness(-1.0f);
@@ -120,13 +120,13 @@ int main()
         ImGui::SFML::Update(window, delta);
 
         // Lock ImGui to bottom of screen
-        ImGui::SetNextWindowPos(ImVec2(0, 500), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(500, 200), ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(1000, 0), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(300, 1000), ImGuiCond_Always);
 
         ImGuiWindowFlags flags  = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
         ImGui::Begin("Reaction Diffusion", nullptr, flags);
 
-        ImGui::Columns(2, "columns");
+        // ImGui::Rows(2, "rows");
 
         ImGui::SliderFloat("R", &R, 0.0f, 255.0f);
         ImGui::SliderFloat("G", &G, 0.0f, 255.0f);
@@ -134,21 +134,21 @@ int main()
 
         ImGui::Checkbox("Display Particles", &display_particles);
 
-        ImGui::NextColumn();
+        // ImGui::NextColumn();
 
         // Set up and display example color
         bool valid_mouse = true;
         sf::Color thumbnailColor;
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-        if (mousePos.y > 500 || mousePos.y < 0 || mousePos.x > 500 || mousePos.x < 0) 
+        if (mousePos.y > 1000 || mousePos.y < 0 || mousePos.x > 1000 || mousePos.x < 0) 
         {
             thumbnailColor = sf::Color(0, 0, 0);
             valid_mouse = false;
         }
         else
         {
-            float norm_x = mousePos.x / 500.0f;
-            float norm_y = mousePos.y / 500.0f;
+            float norm_x = mousePos.x / 1000.0f;
+            float norm_y = mousePos.y / 1000.0f;
             thumbnailColor = sf::Color(
                 static_cast<sf::Uint32>(norm_x * 255),
                 static_cast<sf::Uint32>(norm_y * 255), 
@@ -158,7 +158,7 @@ int main()
 
         thumbnail.setFillColor(thumbnailColor);
         thumbnailTexture.draw(thumbnail);
-        ImGui::Image(thumbnailTexture, sf::Vector2f(75, 75));
+        ImGui::Image(thumbnailTexture, sf::Vector2f(150, 150));
 
         ImGui::End();
 
@@ -170,11 +170,11 @@ int main()
         // Draw turing pattern hits
         for (const PatternResult& pattern : turing)
         {
-            float scale_f = pattern.params.f * 500.0f;
-            float scale_k = pattern.params.k * 500.0f;
+            float scale_f = pattern.params.f * 1000.0f;
+            float scale_k = pattern.params.k * 1000.0f;
 
-            double justify_f = scale_f - std::fmod(scale_f, 5.0);
-            double justify_k = scale_k - std::fmod(scale_k, 5.0);
+            double justify_f = scale_f - std::fmod(scale_f, 10.0);
+            double justify_k = scale_k - std::fmod(scale_k, 10.0);
 
             hit_rect.setPosition(justify_f, justify_k);
             window.draw(hit_rect);
@@ -187,7 +187,7 @@ int main()
             circle.setFillColor(particle_color);
             for (const Particle& particle : particles)
             {
-                circle.setPosition(particle.pos.f * 500.0 - 2.5, particle.pos.k * 500.0 - 2.5);
+                circle.setPosition(particle.pos.f * 1000.0 - 2.5, particle.pos.k * 1000.0 - 2.5);
 
                 // Normalize directions before drawing noses for consistent length
                 double dir_magnitude = std::sqrt(
@@ -197,10 +197,10 @@ int main()
                 double norm_k = particle.dir.k / dir_magnitude;
 
                 auto nose = create_line(
-                    sf::Vector2f(particle.pos.f * 500.0, particle.pos.k * 500.0),
+                    sf::Vector2f(particle.pos.f * 1000.0, particle.pos.k * 1000.0),
                     sf::Vector2f(
-                        particle.pos.f * 500.0 + norm_f * 10,
-                        particle.pos.k * 500.0 + norm_k * 10
+                        particle.pos.f * 1000.0 + norm_f * 10,
+                        particle.pos.k * 1000.0 + norm_k * 10
                     ),
                     particle_color
                 );
@@ -211,8 +211,8 @@ int main()
 
         if (valid_mouse)
         {
-            float hover_x = mousePos.x - std::fmod(mousePos.x, 5.0);
-            float hover_y = mousePos.y - std::fmod(mousePos.y, 5.0);
+            float hover_x = mousePos.x - std::fmod(mousePos.x, 10.0);
+            float hover_y = mousePos.y - std::fmod(mousePos.y, 10.0);
 
             hover_rect.setPosition(hover_x, hover_y);
             window.draw(hover_rect);
