@@ -15,7 +15,7 @@ private:
     const size_t max_size_;
 
 public:
-    ThreadSafeQueue(size_t max_size = 200) : max_size_(max_size) {}
+    ThreadSafeQueue(size_t max_size = 10) : max_size_(max_size) {}
 
     ~ThreadSafeQueue() {
         shutdown_ = true;
