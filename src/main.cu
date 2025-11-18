@@ -10,6 +10,7 @@
 #include "particle.h"
 #include "rendering.h"
 #include "pattern_detection.cuh"
+#include "async_pattern_detector.h"
 
 int main()
 {
@@ -52,6 +53,10 @@ int main()
         particles.emplace_back(Particle(position, speed, direction));
     }
 
+    // Create thread management object
+    AsyncPatternDetector detector;
+    int next_request_id = 0;
+
     // Particle visualisation geometry
     sf::CircleShape circle(2.5);
     sf::RectangleShape hit_rect(sf::Vector2f(5, 5));
@@ -72,7 +77,7 @@ int main()
 
     // Keep track of valid patterns
     // Eventually, this should be a more complex data structure
-    std::vector<Vec4D> turing;
+    std::vector<PatternResult> turing;
 
     // Main loop
     while (window.isOpen())
@@ -84,6 +89,31 @@ int main()
             ImGui::SFML::ProcessEvent(window, event);
             if (event.type == sf::Event::Closed)
                 window.close();
+        }
+
+        // See if there are any discovered patterns that we can display!
+        std::vector<AsyncPatternDetector::Result> results;
+        if (detector.try_get_results(results, 100) > 0)
+        {
+            for (const auto& result : results)
+            {
+                for (const auto& pattern : result.patterns)
+                {
+                    // Come back and correct this condition when parameters are better
+                    // tuned
+                    if (pattern.classification == PatternType::OSCILLATING_PATTERN)
+                    {
+                        turing.emplace_back(pattern);
+                    }
+                }
+            }
+        }
+
+        // Submit work every second (should really be faster than that)
+        static sf::Clock detection_timer;
+        if (detection_timer.getElapsedTime().asSeconds() > 1.0) {
+            scan_particle_positions(particles, detector, next_request_id);
+            detection_timer.restart();
         }
 
         sf::Time delta = clock.restart();
@@ -133,16 +163,15 @@ int main()
         ImGui::End();
 
         update_particle_positions(particles, turing, delta);
-        scan_particle_positions(particles, turing);
 
         // Clear window
         window.clear(sf::Color::Black);
 
         // Draw turing pattern hits
-        for (const Vec4D& pos : turing)
+        for (const PatternResult& pattern : turing)
         {
-            float scale_f = pos.f * 500.0f;
-            float scale_k = pos.k * 500.0f;
+            float scale_f = pattern.params.f * 500.0f;
+            float scale_k = pattern.params.k * 500.0f;
 
             double justify_f = scale_f - std::fmod(scale_f, 5.0);
             double justify_k = scale_k - std::fmod(scale_k, 5.0);

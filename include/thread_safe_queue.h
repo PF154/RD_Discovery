@@ -13,6 +13,7 @@ private:
     std::condition_variable not_empty_;  // For consumers waiting for data
     std::condition_variable not_full_;   // For producers waiting for space
     const size_t max_size_;
+    bool shutdown_;
 
 public:
     ThreadSafeQueue(size_t max_size = 10) : max_size_(max_size) {}

@@ -1,11 +1,18 @@
 #include "particle.h"
 #include "pattern_detection.cuh"
+#include "async_pattern_detector.h"
 #include <random>
 #include <cmath>
 
-void scan_particle_positions(std::vector<Particle>& particles, std::vector<Vec4D>& turing)
+void scan_particle_positions(
+    std::vector<Particle>& particles,
+    AsyncPatternDetector& detector,
+    int& request_id
+)
 {
     int batch_size = 25;
+    if (particles.size() < batch_size) return;
+
     std::vector<size_t> indices(particles.size());
     std::iota(indices.begin(), indices.end(), 0);
 
@@ -42,25 +49,12 @@ void scan_particle_positions(std::vector<Particle>& particles, std::vector<Vec4D
         });
     }
 
-    // Run pattern detection pipeline
-    std::vector<PatternResult> results = detect_patterns_batch(param_batch);
-
-    // Convert oscillating patterns to Vec4D and add to turing vector
-    for (const auto& result : results) {
-        if (result.classification == PatternType::OSCILLATING_PATTERN) {
-            turing.emplace_back(
-                result.params.f,
-                result.params.k,
-                result.params.du,
-                result.params.dv
-            );
-        }
-    }
+    detector.submit_work(std::move(param_batch), request_id++);
 }
 
 void update_particle_positions(
     std::vector<Particle>& particles, 
-    std::vector<Vec4D>& wells, 
+    std::vector<PatternResult>& wells, 
     const sf::Time& delta
 )
 {
@@ -75,13 +69,13 @@ void update_particle_positions(
         std::mt19937 gen(rd());
         std::uniform_real_distribution<double> dist(-0.05, 0.05);
         Vec4D random_influence(dist(gen), dist(gen), dist(gen), dist(gen));
-        for (Vec4D well : wells)
+        for (const PatternResult& well : wells)
         {
             // Compute Euclidean distance between particle and well (4D)
-            double df = particle.pos.f - well.f;
-            double dk = particle.pos.k - well.k;
-            double ddu = particle.pos.du - well.du;
-            double ddv = particle.pos.dv - well.dv;
+            double df = particle.pos.f - well.params.f;
+            double dk = particle.pos.k - well.params.k;
+            double ddu = particle.pos.du - well.params.du;
+            double ddv = particle.pos.dv - well.params.dv;
             double distance = std::sqrt(df * df + dk * dk + ddu * ddu + ddv * ddv);
             
             double safe_distance = std::max(distance, 0.01);  // Prevent division by near-zero

@@ -3,6 +3,11 @@
 #include <vector>
 #include <SFML/System/Time.hpp>
 
+#include "pattern_detection.cuh"
+
+// Need this for submitting work to the GPU manager thread
+class AsyncPatternDetector;
+
 struct Vec4D
 {
     Vec4D(double f, double k, double du, double dv)
@@ -23,5 +28,9 @@ struct Particle
 };
 
 // Particle system functions
-void scan_particle_positions(std::vector<Particle>& particles, std::vector<Vec4D>& turing);
-void update_particle_positions(std::vector<Particle>& particles, std::vector<Vec4D>& wells, const sf::Time& delta);
+void scan_particle_positions(
+    std::vector<Particle>& particles,
+    AsyncPatternDetector& detector,
+    int& request_id
+);
+void update_particle_positions(std::vector<Particle>& particles, std::vector<PatternResult>& wells, const sf::Time& delta);

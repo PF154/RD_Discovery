@@ -31,11 +31,14 @@ add_executable(reaction_diffusion
     src/particle.cpp
     src/rendering.cpp
     src/pattern_detection.cu
+    src/async_pattern_detector.cpp
     # Project headers
     include/particle.h
     include/rendering.h
     include/definitions.cuh
     include/pattern_detection.cuh
+    include/thread_safe_queue.h
+    include/async_pattern_detector.h
     # ImGui core files
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp
