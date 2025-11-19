@@ -2,7 +2,6 @@
 #include <vector>
 #include <random>
 #include <cmath>
-#include <future>
 
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
@@ -23,8 +22,6 @@ enum PatternDisplayState {
 int find_pattern_under_mouse(sf::Vector2i mousePos, std::vector<PatternResult>& turing);
 void update_pattern_display(int hovered_pattern_idx, const std::vector<PatternResult>& turing, sf::Texture& pattern_texture);
 
-template<typename T>
-bool future_is_ready(const std::future<T>& f);
 
 int main()
 {
@@ -135,7 +132,7 @@ int main()
 
         // Submit work every second (should really be faster than that)
         static sf::Clock detection_timer;
-        if (detection_timer.getElapsedTime().asSeconds() > 1.0) {
+        if (detection_timer.getElapsedTime().asSeconds() > 0.5) {
             scan_particle_positions(particles, detector, next_request_id);
             detection_timer.restart();
         }
@@ -304,9 +301,4 @@ void update_pattern_display(int hovered_pattern_idx, const std::vector<PatternRe
         displayed_pattern_idx = PatternDisplayState::SHOWING_BLACK;
     }
     // else: already displaying the correct pattern, do nothing
-}
-
-template<typename T>
-bool future_is_ready(const std::future<T>& f) {
-    return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
