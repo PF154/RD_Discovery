@@ -1,4 +1,5 @@
 #include "rendering.h"
+#include "pattern_detection.cuh"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -109,6 +110,31 @@ void draw_axes(sf::RenderWindow& window, float min_f, float max_f, float min_k, 
             window.draw(label);
         }
     }
+}
+
+sf::Image image_from_pattern_data(const PatternResult& pattern) 
+{
+    const int Nx = 100;
+    const int Ny = 100;
+
+    sf::Image image;
+    image.create(Nx, Ny);
+
+    for (int i = 0; i < Nx * Ny; i++)
+    {
+        double u = pattern.u_final[i];
+        double v = pattern.v_final[i];
+
+        uint8_t r = 0;
+        uint8_t g = static_cast<uint8_t>(std::clamp(v * 255.0, 0.0, 255.0));
+        uint8_t b = static_cast<uint8_t>(std::clamp(u * 255.0, 0.0, 255.0));
+
+        int x = i % Nx;
+        int y = i / Nx;
+        image.setPixel(x, y, sf::Color(r, g, b));
+    }
+
+    return image;
 }
 
 void write_ppm(const std::string& filename, const uint8_t* data, int width, int height) {

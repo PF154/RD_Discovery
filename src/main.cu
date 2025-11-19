@@ -2,6 +2,7 @@
 #include <vector>
 #include <random>
 #include <cmath>
+#include <future>
 
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
@@ -11,6 +12,19 @@
 #include "rendering.h"
 #include "pattern_detection.cuh"
 #include "async_pattern_detector.h"
+
+// Pattern display state values
+enum PatternDisplayState {
+    UNINITIALIZED = -2,
+    SHOWING_BLACK = -1
+    // Values >= 0 represent pattern indices
+};
+
+int find_pattern_under_mouse(sf::Vector2i mousePos, std::vector<PatternResult>& turing);
+void update_pattern_display(int hovered_pattern_idx, const std::vector<PatternResult>& turing, sf::Texture& pattern_texture);
+
+template<typename T>
+bool future_is_ready(const std::future<T>& f);
 
 int main()
 {
@@ -83,9 +97,15 @@ int main()
     // Eventually, this should be a more complex data structure
     std::vector<PatternResult> turing;
 
+    // Pattern display state (static to persist across frames)
+    static sf::Texture pattern_texture;
+
     // Main loop
     while (window.isOpen())
     {
+        int hovered_pattern_idx = find_pattern_under_mouse(sf::Mouse::getPosition(window), turing);
+        update_pattern_display(hovered_pattern_idx, turing, pattern_texture);
+
         // Handle events
         sf::Event event;
         while (window.pollEvent(event))
@@ -144,34 +164,13 @@ int main()
 
         // ImGui::NextColumn();
 
-        // Set up and display example color
-        bool valid_mouse = true;
-        sf::Color thumbnailColor;
-        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-        if (mousePos.y > 1000 || mousePos.y < 0 || mousePos.x > 1000 || mousePos.x < 0) 
-        {
-            thumbnailColor = sf::Color(0, 0, 0);
-            valid_mouse = false;
-        }
-        else
-        {
-            float norm_x = mousePos.x / 1000.0f;
-            float norm_y = mousePos.y / 1000.0f;
-            thumbnailColor = sf::Color(
-                static_cast<sf::Uint32>(norm_x * 255),
-                static_cast<sf::Uint32>(norm_y * 255), 
-                static_cast<sf::Uint32>(255)
-            );
-        }
-
         // Add any other widgets here
 
         // Add any other widgets above here
 
-        // Image should be the last widget we add
-        thumbnail.setFillColor(thumbnailColor);
-        thumbnailTexture.draw(thumbnail);
-
+        // Display pattern texture (updated by update_pattern_display)
+        bool valid_mouse = true;
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         float available_width = ImGui::GetContentRegionAvail().x;
         float available_height = ImGui::GetContentRegionAvail().y;
         float offset_x = (available_width - 250) * 0.5f;
@@ -182,7 +181,7 @@ int main()
         if (offset_x > 0.0f)
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + offset_y);
 
-        ImGui::Image(thumbnailTexture, sf::Vector2f(250, 250));
+        ImGui::Image(pattern_texture, sf::Vector2f(250, 250));
 
         ImGui::End();
 
@@ -253,4 +252,61 @@ int main()
     ImGui::SFML::Shutdown();
 
     return 0;
+}
+
+int find_pattern_under_mouse(sf::Vector2i mousePos, std::vector<PatternResult>& turing)
+{
+    // Justify mouse position to 10-pixel grid (same as hit_rect rendering)
+    float mouse_grid_x = mousePos.x - std::fmod(mousePos.x, 10.0);
+    float mouse_grid_y = mousePos.y - std::fmod(mousePos.y, 10.0);
+
+    for (int i = 0; i < turing.size(); i++)
+    {
+        // Scale pattern position to pixels
+        float scale_f = turing[i].params.f * 1000.0f;
+        float scale_k = turing[i].params.k * 1000.0f;
+
+        // Justify pattern position to 10-pixel grid
+        float pattern_grid_x = scale_f - std::fmod(scale_f, 10.0);
+        float pattern_grid_y = scale_k - std::fmod(scale_k, 10.0);
+
+        // Check if in same 10-pixel box
+        if (mouse_grid_x == pattern_grid_x && mouse_grid_y == pattern_grid_y) {
+            return i;
+        }
+    }
+    return PatternDisplayState::SHOWING_BLACK;  // No pattern under mouse
+}
+
+void update_pattern_display(int hovered_pattern_idx, const std::vector<PatternResult>& turing, sf::Texture& pattern_texture)
+{
+    static int displayed_pattern_idx = PatternDisplayState::UNINITIALIZED;
+
+    // If hovering a pattern different from what's displayed, render it
+    if (hovered_pattern_idx != PatternDisplayState::SHOWING_BLACK &&
+        hovered_pattern_idx != displayed_pattern_idx)
+    {
+        sf::Image img = image_from_pattern_data(turing[hovered_pattern_idx]);
+        pattern_texture.loadFromImage(img);
+        displayed_pattern_idx = hovered_pattern_idx;
+    }
+    // If not hovering anything and not already showing black, load black
+    else if (hovered_pattern_idx == PatternDisplayState::SHOWING_BLACK &&
+             displayed_pattern_idx != PatternDisplayState::SHOWING_BLACK)
+    {
+        static sf::Image black_image;
+        static bool black_initialized = false;
+        if (!black_initialized) {
+            black_image.create(100, 100, sf::Color::Black);
+            black_initialized = true;
+        }
+        pattern_texture.loadFromImage(black_image);
+        displayed_pattern_idx = PatternDisplayState::SHOWING_BLACK;
+    }
+    // else: already displaying the correct pattern, do nothing
+}
+
+template<typename T>
+bool future_is_ready(const std::future<T>& f) {
+    return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
