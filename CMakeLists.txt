@@ -32,6 +32,10 @@ add_executable(reaction_diffusion
     src/rendering.cpp
     src/pattern_detection.cu
     src/async_pattern_detector.cpp
+    src/realtime_simulation.cu
+    src/realtime_mode.cpp
+    src/particle_swarm_mode.cpp
+    src/utilities.cpp
     # Project headers
     include/particle.h
     include/rendering.h
@@ -39,6 +43,12 @@ add_executable(reaction_diffusion
     include/pattern_detection.cuh
     include/thread_safe_queue.h
     include/async_pattern_detector.h
+    include/realtime_simulation.cuh
+    include/pattern_viewer_state.h
+    include/realtime_mode.h
+    include/particle_swarm_mode.h
+    include/sim_types.h
+    include/utilities.h
     # ImGui core files
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp

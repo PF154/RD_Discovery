@@ -1,5 +1,5 @@
-#include "../include/pattern_detection.cuh"
-#include "../include/definitions.cuh"  // For gpuErrchk macro
+#include "pattern_detection.cuh"
+#include "definitions.cuh"
 #include <cmath>
 
 // =============================================================================

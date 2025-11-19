@@ -1,5 +1,6 @@
 #include "async_pattern_detector.h"
 #include "pattern_detection.cuh"
+#include <thread>
 
 AsyncPatternDetector::AsyncPatternDetector()
 {

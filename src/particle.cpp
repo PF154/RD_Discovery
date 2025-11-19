@@ -1,7 +1,10 @@
 #include "particle.h"
-#include "pattern_detection.cuh"
 #include "async_pattern_detector.h"
+#include "pattern_detection.cuh"
+#include <SFML/System/Time.hpp>
+#include <vector>
 #include <random>
+#include <algorithm>
 #include <cmath>
 
 void scan_particle_positions(
@@ -10,6 +13,7 @@ void scan_particle_positions(
     int& request_id
 )
 {
+    // Pick batch_size random particles to test
     int batch_size = 25;
     if (particles.size() < batch_size) return;
 

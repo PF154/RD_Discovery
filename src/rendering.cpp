@@ -1,9 +1,11 @@
 #include "rendering.h"
 #include "pattern_detection.cuh"
+#include <SFML/Graphics.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <cstdint>
 
 sf::VertexArray create_line(sf::Vector2f start, sf::Vector2f end, sf::Color color)
 {
@@ -149,9 +151,9 @@ void write_ppm(const std::string& filename, const uint8_t* data, int width, int 
 
     // Write RGB values (ignore alpha if present)
     for (int i = 0; i < (width * height); ++i) {
-        out.put(data[i * 4 + 0]); // Red
-        out.put(data[i * 4 + 1]); // Green
-        out.put(data[i * 4 + 2]); // Blue
+        out.put(data[i * 4 + 0]);
+        out.put(data[i * 4 + 1]);
+        out.put(data[i * 4 + 2]);
     }
 
     out.close();
