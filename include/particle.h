@@ -3,6 +3,7 @@
 #include <vector>
 #include <SFML/System/Time.hpp>
 
+#include "sim_types.h"
 #include "pattern_detection.cuh"
 
 // Need this for submitting work to the GPU manager thread
@@ -33,4 +34,9 @@ void scan_particle_positions(
     AsyncPatternDetector& detector,
     int& request_id
 );
-void update_particle_positions(std::vector<Particle>& particles, std::vector<PatternResult>& wells, const sf::Time& delta);
+void update_particle_positions(
+    std::vector<Particle>& particles,
+    std::vector<PatternResult>& wells,
+    const sf::Time& delta,
+    const FKExtents& extents
+);

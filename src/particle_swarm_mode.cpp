@@ -51,6 +51,10 @@ void run_particle_swarm(
 
     static bool extents_modified = false;
 
+    // Control where particles can go
+    static FKExtents particle_extents = extents;
+    static bool constrain_particles = false;
+
     int hovered_pattern_idx = find_pattern_under_mouse(sf::Mouse::getPosition(window), turing, extents);
     update_pattern_display(hovered_pattern_idx, turing, pattern_texture);
 
@@ -101,6 +105,11 @@ void run_particle_swarm(
     ImGui::Checkbox("Particles", &display_particles);
     ImGui::Checkbox("Axes", &display_axes);
 
+    if (ImGui::Button("Constrain particle movement to exetents"))
+    {
+        particle_extents = extents;
+    }
+
     if (extents_modified)
     {
         if (ImGui::Button("Reset Extents")) 
@@ -109,8 +118,6 @@ void run_particle_swarm(
             reset_extents = true;
         }
     }
-
-    // ImGui::NextColumn();
 
     // Add any other widgets here
 
@@ -133,7 +140,7 @@ void run_particle_swarm(
 
     ImGui::End();
 
-    update_particle_positions(particles, turing, delta);
+    update_particle_positions(particles, turing, delta, particle_extents);
 
     // Clear window
     window.clear(sf::Color::Black);
@@ -190,20 +197,16 @@ void run_particle_swarm(
 
         sf::Vector2f param_coords = screen_to_param(mousePos.x, mousePos.y, extents);
 
-        float size_x = param_coords.x - selection_state.current_extents.min_f;
-        float size_y = param_coords.y - selection_state.current_extents.min_k;
-
-        std::cout << "size_x: " << size_x << std::endl; 
-        std::cout << "size_y: " << size_y << std::endl; 
-
         float pos_x = selection_state.current_extents.min_f;
         float pos_y = selection_state.current_extents.min_k;
 
-        std::cout << "pos_x: " << pos_x << std::endl; 
-        std::cout << "pos_y: " << pos_y << std::endl; 
+        sf::Vector2f screen_start = param_to_screen(pos_x, pos_y, extents);
 
-        select_rect.setPosition(sf::Vector2f(pos_x * 1000.f, pos_y * 1000.f));
-        select_rect.setSize(sf::Vector2f(size_x * 1000.f, size_y * 1000.f));
+        select_rect.setPosition(screen_start);
+        select_rect.setSize(sf::Vector2f(
+            mousePos.x - screen_start.x, 
+            mousePos.y - screen_start.y
+        ));
 
         window.draw(select_rect);
     }

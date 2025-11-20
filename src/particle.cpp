@@ -59,7 +59,8 @@ void scan_particle_positions(
 void update_particle_positions(
     std::vector<Particle>& particles, 
     std::vector<PatternResult>& wells, 
-    const sf::Time& delta
+    const sf::Time& delta,
+    const FKExtents& extents
 )
 {
     for (Particle& particle: particles)
