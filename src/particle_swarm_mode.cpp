@@ -4,6 +4,7 @@
 #include <imgui-SFML.h>
 #include <vector>
 #include <cmath>
+#include <iostream>
 #include "rendering.h"
 #include "utilities.h"
 
@@ -12,7 +13,10 @@ void run_particle_swarm(
     std::vector<PatternResult>& turing,
     AsyncPatternDetector& detector,
     std::vector<Particle>& particles,
-    sf::Clock& clock
+    sf::Clock& clock,
+    const FKExtents& extents,
+    const SelectionState& selection_state,
+    bool& reset_extents
 )
 {
     static sf::Texture pattern_texture;
@@ -29,6 +33,12 @@ void run_particle_swarm(
     hover_rect.setOutlineColor(sf::Color(3, 252, 236));
     hover_rect.setOutlineThickness(-1.0f);
 
+    // Extent selection geometry
+    static sf::RectangleShape select_rect(sf::Vector2f(1, 1));
+    select_rect.setFillColor(sf::Color::Transparent);
+    select_rect.setOutlineColor(sf::Color(245, 66, 224));
+    select_rect.setOutlineThickness(-1.0f);
+
     static float R = 100.0f;
     static float G = 200.0f;
     static float B = 100.0f;
@@ -39,7 +49,9 @@ void run_particle_swarm(
     static float du = 0.16;
     static float dv = 0.08;
 
-    int hovered_pattern_idx = find_pattern_under_mouse(sf::Mouse::getPosition(window), turing);
+    static bool extents_modified = false;
+
+    int hovered_pattern_idx = find_pattern_under_mouse(sf::Mouse::getPosition(window), turing, extents);
     update_pattern_display(hovered_pattern_idx, turing, pattern_texture);
 
     // See if there are any discovered patterns that we can display!
@@ -89,6 +101,15 @@ void run_particle_swarm(
     ImGui::Checkbox("Particles", &display_particles);
     ImGui::Checkbox("Axes", &display_axes);
 
+    if (extents_modified)
+    {
+        if (ImGui::Button("Reset Extents")) 
+        {
+            extents_modified = false;
+            reset_extents = true;
+        }
+    }
+
     // ImGui::NextColumn();
 
     // Add any other widgets here
@@ -120,11 +141,11 @@ void run_particle_swarm(
     // Draw turing pattern hits
     for (const PatternResult& pattern : turing)
     {
-        float scale_f = pattern.params.f * 1000.0f;
-        float scale_k = pattern.params.k * 1000.0f;
+        // Transform from parameter space to screen space using extents
+        sf::Vector2f screen_pos = param_to_screen(pattern.params.f, pattern.params.k, extents);
 
-        double justify_f = scale_f - std::fmod(scale_f, 10.0);
-        double justify_k = scale_k - std::fmod(scale_k, 10.0);
+        double justify_f = screen_pos.x - std::fmod(screen_pos.x, 10.0);
+        double justify_k = screen_pos.y - std::fmod(screen_pos.y, 10.0);
 
         hit_rect.setPosition(justify_f, justify_k);
         window.draw(hit_rect);
@@ -137,20 +158,23 @@ void run_particle_swarm(
         circle.setFillColor(particle_color);
         for (const Particle& particle : particles)
         {
-            circle.setPosition(particle.pos.f * 1000.0 - 2.5, particle.pos.k * 1000.0 - 2.5);
+            // Transform particle position from parameter space to screen space using extents
+            sf::Vector2f screen_pos = param_to_screen(particle.pos.f, particle.pos.k, extents);
+
+            circle.setPosition(screen_pos.x - 2.5, screen_pos.y - 2.5);
 
             // Normalize directions before drawing noses for consistent length
             double dir_magnitude = std::sqrt(
                 particle.dir.f * particle.dir.f + particle.dir.k * particle.dir.k
             );
-            double norm_f = particle.dir.f / dir_magnitude;
-            double norm_k = particle.dir.k / dir_magnitude;
+            double norm_dir_f = particle.dir.f / dir_magnitude;
+            double norm_dir_k = particle.dir.k / dir_magnitude;
 
             auto nose = create_line(
-                sf::Vector2f(particle.pos.f * 1000.0, particle.pos.k * 1000.0),
+                screen_pos,
                 sf::Vector2f(
-                    particle.pos.f * 1000.0 + norm_f * 10,
-                    particle.pos.k * 1000.0 + norm_k * 10
+                    screen_pos.x + norm_dir_f * 10,
+                    screen_pos.y + norm_dir_k * 10
                 ),
                 particle_color
             );
@@ -159,7 +183,29 @@ void run_particle_swarm(
         }
     }
 
-    if (valid_mouse)
+
+    if (selection_state.is_selecting)
+    {
+        extents_modified = true;
+
+        float size_x = (mousePos.x / 1000.0f) - selection_state.current_extents.min_f;
+        float size_y = (mousePos.y / 1000.0f) - selection_state.current_extents.min_k;
+
+        std::cout << "size_x: " << size_x << std::endl; 
+        std::cout << "size_y: " << size_y << std::endl; 
+
+        float pos_x = selection_state.current_extents.min_f;
+        float pos_y = selection_state.current_extents.min_k;
+
+        std::cout << "pos_x: " << pos_x << std::endl; 
+        std::cout << "pos_y: " << pos_y << std::endl; 
+
+        select_rect.setPosition(sf::Vector2f(pos_x * 1000.f, pos_y * 1000.f));
+        select_rect.setSize(sf::Vector2f(size_x * 1000.f, size_y * 1000.f));
+
+        window.draw(select_rect);
+    }
+    else if (valid_mouse && !selection_state.is_selecting)
     {
         float hover_x = mousePos.x - std::fmod(mousePos.x, 10.0);
         float hover_y = mousePos.y - std::fmod(mousePos.y, 10.0);
@@ -168,7 +214,7 @@ void run_particle_swarm(
         window.draw(hover_rect);
     }
 
-    if (display_axes) draw_axes(window, 0.0f, 1.0f, 0.0f, 1.0f);
+    if (display_axes) draw_axes(window, extents.min_f, extents.max_f, extents.min_k, extents.max_k);
 
     ImGui::SFML::Render(window);
 

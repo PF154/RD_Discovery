@@ -1,0 +1,6 @@
+Add option to begin real-time mode from whole domain random noise
+Add option in real-time mode to tweak f, k, du, dv
+Add ability to zoom in on certain areas of f-k parameter space
+Tune particle behavior
+Tune turing detection model
+Constrain particle movement to zoomed region

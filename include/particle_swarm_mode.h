@@ -11,7 +11,10 @@ void run_particle_swarm(
     std::vector<PatternResult>& turing,
     AsyncPatternDetector& detector,
     std::vector<Particle>& particles,
-    sf::Clock& clock
+    sf::Clock& clock,
+    const FKExtents& extents,
+    const SelectionState& selection_state,
+    bool& reset_extents
 );
 
 void update_pattern_display(

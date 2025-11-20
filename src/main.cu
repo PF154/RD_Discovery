@@ -66,9 +66,21 @@ int main()
 
     std::optional<PatternViewerState> realtime_pattern;
 
+    // Is the user holding and dragging right mouse to select?
+    SelectionState selection_state;
+    FKExtents sim_extents = {0.0, 0.0, 1.0, 1.0};
+
+    bool reset_extents = false;
+
     // Main loop
     while (window.isOpen())
     {
+        if (reset_extents)
+        {
+            sim_extents = {0.0, 0.0, 1.0, 1.0};
+            reset_extents = false;
+        }
+
         // Handle events
         sf::Event event;
         while (window.pollEvent(event))
@@ -76,10 +88,14 @@ int main()
             ImGui::SFML::ProcessEvent(window, event);
             if (event.type == sf::Event::Closed)
                 window.close();
-            if (event.type == sf::Event::MouseButtonPressed &&
-                event.mouseButton.button == sf::Mouse::Left) {
-                int clicked_idx = find_pattern_under_mouse(sf::Mouse::getPosition(window), turing);
-                if (clicked_idx >= 0 && clicked_idx < turing.size()) {
+            
+            // Left click to enter real-time visualizaiton
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+            {
+                int clicked_idx = find_pattern_under_mouse(sf::Mouse::getPosition(window), turing, sim_extents);
+
+                if (clicked_idx >= 0 && clicked_idx < turing.size()) 
+                {
                     realtime_pattern.emplace(PatternViewerState{
                         std::make_unique<RealtimePatternSimulation>(turing[clicked_idx].params),
                         sf::Texture(),
@@ -88,11 +104,56 @@ int main()
                     mode = AppMode::REAL_TIME_PATTERN;
                 }
             }
+
+            // Right click and hold to select simulation extents
+            if (event.type == sf::Event::MouseButtonPressed && 
+                event.mouseButton.button == sf::Mouse::Right && 
+                mode == AppMode::PARTICLE_SWARM)
+            {
+                selection_state.is_selecting = true;
+
+                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+
+                selection_state.current_extents.min_f = mousePos.x / 1000.f;
+                selection_state.current_extents.min_k = mousePos.y / 1000.f;
+
+                std::cout << "min f: " << selection_state.current_extents.min_f << std::endl;
+                std::cout << "min k: " << selection_state.current_extents.min_k << std::endl;
+            }
+            
+            // Right click release indicates selection
+            if (event.type == sf::Event::MouseButtonReleased && 
+                event.mouseButton.button == sf::Mouse::Right && 
+                mode == AppMode::PARTICLE_SWARM)
+            {
+                selection_state.is_selecting = false;
+
+                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+
+                sim_extents.min_f = selection_state.current_extents.min_f;
+                sim_extents.min_k = selection_state.current_extents.min_k;
+                sim_extents.max_f = mousePos.x / 1000.f;
+                sim_extents.max_k = mousePos.y / 1000.f;
+
+                std::cout << "max f: " << sim_extents.max_f << std::endl;
+                std::cout << "max k: " << sim_extents.max_k << std::endl;
+            }
+
         }
 
         if (mode == AppMode::PARTICLE_SWARM)
         {
-            run_particle_swarm(window, turing, detector, particles, clock);
+            correct_extents(sim_extents);
+            run_particle_swarm(
+                window, 
+                turing, 
+                detector, 
+                particles, 
+                clock, 
+                sim_extents, 
+                selection_state, 
+                reset_extents
+            );
         }
         else
         {
