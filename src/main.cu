@@ -114,8 +114,10 @@ int main()
 
                 sf::Vector2i mousePos = sf::Mouse::getPosition(window);
 
-                selection_state.current_extents.min_f = mousePos.x / 1000.f;
-                selection_state.current_extents.min_k = mousePos.y / 1000.f;
+                sf::Vector2f param_coords = screen_to_param(mousePos.x, mousePos.y, sim_extents);;
+
+                selection_state.current_extents.min_f = param_coords.x;
+                selection_state.current_extents.min_k = param_coords.y;
 
                 std::cout << "min f: " << selection_state.current_extents.min_f << std::endl;
                 std::cout << "min k: " << selection_state.current_extents.min_k << std::endl;
@@ -132,8 +134,11 @@ int main()
 
                 sim_extents.min_f = selection_state.current_extents.min_f;
                 sim_extents.min_k = selection_state.current_extents.min_k;
-                sim_extents.max_f = mousePos.x / 1000.f;
-                sim_extents.max_k = mousePos.y / 1000.f;
+
+                sf::Vector2f param_coords = screen_to_param(mousePos.x, mousePos.y, sim_extents);
+
+                sim_extents.max_f = param_coords.x;
+                sim_extents.max_k = param_coords.y;
 
                 std::cout << "max f: " << sim_extents.max_f << std::endl;
                 std::cout << "max k: " << sim_extents.max_k << std::endl;

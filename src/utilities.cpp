@@ -14,6 +14,19 @@ sf::Vector2f param_to_screen(double param_f, double param_k, const FKExtents& ex
     return sf::Vector2f(norm_f * 1000.0f, norm_k * 1000.0f);
 }
 
+sf::Vector2f screen_to_param(double screen_x, double screen_y, const FKExtents& extents)
+{
+    // Normalize from screen space [0, 1000] to [0, 1]
+    float norm_f = screen_x / 1000.0f;
+    float norm_k = screen_y / 1000.0f;
+
+    // Scale to parameter space based on extents
+    float param_f = norm_f * (extents.max_f - extents.min_f) + extents.min_f;
+    float param_k = norm_k * (extents.max_k - extents.min_k) + extents.min_k;
+
+    return sf::Vector2f(param_f, param_k);
+}
+
 int find_pattern_under_mouse(sf::Vector2i mousePos, std::vector<PatternResult>& turing, const FKExtents& extents)
 {
     // Justify mouse position to 10-pixel grid (same as hit_rect rendering)

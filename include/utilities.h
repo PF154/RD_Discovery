@@ -9,6 +9,9 @@
 // Transform parameter space coordinates to screen space coordinates
 sf::Vector2f param_to_screen(double param_f, double param_k, const FKExtents& extents);
 
+// Transform screen space coordinates to parameter space coordinates
+sf::Vector2f screen_to_param(double screen_x, double screen_y, const FKExtents& extents);
+
 // If extent selection is inverted, flip it back
 void correct_extents(FKExtents& extents);
 

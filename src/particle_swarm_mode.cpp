@@ -188,8 +188,10 @@ void run_particle_swarm(
     {
         extents_modified = true;
 
-        float size_x = (mousePos.x / 1000.0f) - selection_state.current_extents.min_f;
-        float size_y = (mousePos.y / 1000.0f) - selection_state.current_extents.min_k;
+        sf::Vector2f param_coords = screen_to_param(mousePos.x, mousePos.y, extents);
+
+        float size_x = param_coords.x - selection_state.current_extents.min_f;
+        float size_y = param_coords.y - selection_state.current_extents.min_k;
 
         std::cout << "size_x: " << size_x << std::endl; 
         std::cout << "size_y: " << size_y << std::endl; 
