@@ -110,6 +110,33 @@ void RealtimePatternSimulation::initialize_perturbation()
     current_timestep = 0;
 }
 
+void RealtimePatternSimulation::initialize_random()
+{
+    // Create CPU buffers for initial U and V fields
+    std::vector<double> u_init(Nx * Ny);
+    std::vector<double> v_init(Nx * Ny);
+
+    // Random number generation
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> seed_chance(0.0, 1.0);
+    std::uniform_real_distribution<double> v_noise(0.0, 0.05);
+
+    // Fill entire domain with random noise
+    for (int i = 0; i < Nx * Ny; i++) {
+        u_init[i] = 1.0;
+        v_init[i] = seed_chance(gen) < 0.02 ? v_noise(gen) : 0.0;
+    }
+
+    // Copy initial conditions to GPU ping buffer
+    gpuErrchk(cudaMemcpy(d_u_ping, u_init.data(), Nx * Ny * sizeof(double), cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(d_v_ping, v_init.data(), Nx * Ny * sizeof(double), cudaMemcpyHostToDevice));
+
+    // Initialize state
+    active_buffer = 0;
+    current_timestep = 0;
+}
+
 double RealtimePatternSimulation::calculate_stable_dt(double dx, double du, double dv)
 {
     double dt_limit = dx*dx / (4 * std::max(du, dv));
@@ -162,6 +189,9 @@ void RealtimePatternSimulation::get_state(std::vector<double>& u_out, std::vecto
 void RealtimePatternSimulation::reset()
 {
     initialize_perturbation();
-    current_timestep = 0;
-    active_buffer = 0;
+}
+
+void RealtimePatternSimulation::reset_random()
+{
+    initialize_random();
 }

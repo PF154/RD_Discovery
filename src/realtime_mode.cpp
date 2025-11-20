@@ -28,6 +28,7 @@ void run_real_time_sim(sf::RenderWindow& window, AppMode& mode, sf::Clock& clock
     ImGui::SliderInt("Steps per frame", &steps_per_frame, 1, 200);
 
     if (ImGui::Button("Reset")) pattern_viewer->sim->reset();
+    if (ImGui::Button("Reset with random noise")) pattern_viewer->sim->reset_random();
 
     if (ImGui::Button("Return to Particle Swarm")) {
         pattern_viewer.reset();  // Calls reset on optional, not pattern sim

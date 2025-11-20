@@ -29,6 +29,7 @@ private:
     void allocate_gpu_memory();
     void free_gpu_memory();
     void initialize_perturbation();
+    void initialize_random();
     double calculate_stable_dt(double dx, double du, double dv);
 
 public:
@@ -61,6 +62,11 @@ public:
      * Reset simulation to initial condition.
      */
     void reset();
+
+    /**
+     * Reset simulation to random noise across entire domain;
+     */
+    void reset_random();
 
     /**
      * Get current timestep number.

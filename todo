@@ -8,3 +8,5 @@ Make particles move across 4 dimensions
 
 Little bugs:
     Floating point precision is messing up repeated zooms
+    (Actually this is maybe not floating point error, because selection scales
+    just fine, and pattern hits display just fine)
