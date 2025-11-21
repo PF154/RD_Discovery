@@ -23,6 +23,14 @@ void run_real_time_sim(sf::RenderWindow& window, AppMode& mode, sf::Clock& clock
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
     ImGui::Begin("Pattern Viewer", nullptr, flags);
 
+    ParamSet p = pattern_viewer->sim->get_params();
+
+    ImGui::Text("Simulation paramseters: ");
+    ImGui::Text("F: %.5f", p.f);
+    ImGui::Text("k: %.5f", p.k);
+    ImGui::Text("Du: %.5f", p.du);
+    ImGui::Text("Dv: %.5f", p.dv);
+
     ImGui::Text("Timestep: %d", pattern_viewer->sim->get_timestep());
 
     ImGui::SliderInt("Steps per frame", &steps_per_frame, 1, 200);
