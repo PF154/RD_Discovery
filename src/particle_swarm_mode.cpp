@@ -5,6 +5,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <random>
 #include "rendering.h"
 #include "utilities.h"
 
@@ -19,6 +20,9 @@ void run_particle_swarm(
     bool& reset_extents
 )
 {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+
     static sf::Texture pattern_texture;
     static int next_request_id = 0;
 
@@ -107,6 +111,13 @@ void run_particle_swarm(
 
     if (ImGui::Button("Constrain particle movement to exetents"))
     {
+        // Redo particle positioning
+        std::uniform_real_distribution<double> f_dist(extents.min_f, extents.max_f);
+        std::uniform_real_distribution<double> k_dist(extents.min_k, extents.max_k);
+
+        for (Particle& particle : particles)
+            particle.pos = Vec4D{f_dist(gen), k_dist(gen), particle.pos.du, particle.pos. dv};
+
         particle_extents = extents;
     }
 

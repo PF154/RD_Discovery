@@ -65,19 +65,30 @@ void update_particle_positions(
 {
     for (Particle& particle: particles)
     {
-        double well_strength = 0.00001;
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> infl_dist(-0.10, 0.10);
+        std::uniform_real_distribution<double> speed_dist(0.05, 0.15);
+
+        double extent_size_f = extents.max_f - extents.min_f;
+        double extent_size_k = extents.max_k - extents.min_k;
+        double avg_extent_size = (extent_size_f + extent_size_k) / 2.0;
+        particle.speed = speed_dist(gen) * avg_extent_size;
+
+        double well_strength = 0.00001 * avg_extent_size * avg_extent_size;
         double max_influence = 4.5;
         double max_cumulative_influence = 10.0;
         Vec4D influence(0.0, 0.0, 0.0, 0.0);
 
-        // We want some randomness in particle direction to avoid getting stuck
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<double> dist(-0.05, 0.05);
-        Vec4D random_influence(dist(gen), dist(gen), dist(gen), dist(gen));
+        Vec4D random_influence(infl_dist(gen), infl_dist(gen), infl_dist(gen), infl_dist(gen));
         for (const PatternResult& well : wells)
         {
-            // Compute Euclidean distance between particle and well (4D)
+            if (well.params.f < extents.min_f || well.params.f > extents.max_f ||
+                well.params.k < extents.min_k || well.params.k > extents.max_k)
+            {
+                continue;
+            }
+
             double df = particle.pos.f - well.params.f;
             double dk = particle.pos.k - well.params.k;
             double ddu = particle.pos.du - well.params.du;
@@ -116,8 +127,11 @@ void update_particle_positions(
         particle.pos.f += particle.dir.f * particle.speed * delta.asSeconds();
         particle.pos.k += particle.dir.k * particle.speed * delta.asSeconds();
 
-        // Periodic boundaries
-        particle.pos.f = std::fmod(particle.pos.f + 1.0, 1.0);
-        particle.pos.k = std::fmod(particle.pos.k + 1.0, 1.0);
+        // Particle position is periodic within extents
+        double range_f = extents.max_f - extents.min_f;
+        double range_k = extents.max_k - extents.min_k;
+
+        particle.pos.f = extents.min_f + std::fmod(particle.pos.f - extents.min_f + range_f, range_f);
+        particle.pos.k = extents.min_k + std::fmod(particle.pos.k - extents.min_k + range_k, range_k);
     }
 }
