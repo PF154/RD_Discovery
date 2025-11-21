@@ -1,4 +1,6 @@
 #include "particle_swarm_mode.h"
+#include "tuning_parameters.h"
+#include "debug_tools.h"
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -28,8 +30,12 @@ void run_particle_swarm(
 
     // Particle visualisation geometry
     static sf::CircleShape circle(2.5);
-    static sf::RectangleShape hit_rect(sf::Vector2f(10, 10));
-    hit_rect.setFillColor(sf::Color::Green);
+    static sf::RectangleShape t_hit_rect(sf::Vector2f(10, 10));
+    t_hit_rect.setFillColor(sf::Color::Green);
+    static sf::RectangleShape osc_hit_rect(sf::Vector2f(10, 10));
+    osc_hit_rect.setFillColor(sf::Color(153, 153, 153));
+    static sf::RectangleShape no_hit_rect(sf::Vector2f(10, 10));
+    no_hit_rect.setFillColor(sf::Color::Red);
 
     // We want a visualization of where the user's cursor is
     static sf::RectangleShape hover_rect(sf::Vector2f(10, 10));
@@ -72,7 +78,7 @@ void run_particle_swarm(
             {
                 // Come back and correct this condition when parameters are better
                 // tuned
-                if (pattern.classification == PatternType::OSCILLATING_PATTERN)
+                if (pattern.classification != PatternType::NO_PATTERN)
                 {
                     turing.emplace_back(pattern);
                 }
@@ -80,9 +86,9 @@ void run_particle_swarm(
         }
     }
 
-    // Submit work every second (should really be faster than that)
+    // Submit work at regular intervals
     static sf::Clock detection_timer;
-    if (detection_timer.getElapsedTime().asSeconds() > 0.5) {
+    if (detection_timer.getElapsedTime().asSeconds() > PARTICLE_SCAN_INTERVAL) {
         scan_particle_positions(particles, detector, next_request_id);
         detection_timer.restart();
     }
@@ -123,11 +129,21 @@ void run_particle_swarm(
 
     if (extents_modified)
     {
-        if (ImGui::Button("Reset Extents")) 
+        if (ImGui::Button("Reset Extents"))
         {
             extents_modified = false;
             reset_extents = true;
         }
+    }
+
+    // Debug/Analysis Tools
+    ImGui::Separator();
+    ImGui::Text("Debug Tools");
+    ImGui::Text("Patterns detected: %zu", turing.size());
+
+    if (ImGui::Button("Export Patterns to CSV"))
+    {
+        export_patterns_csv(turing, "detected_patterns.csv");
     }
 
     // Add any other widgets here
@@ -165,8 +181,21 @@ void run_particle_swarm(
         double justify_f = screen_pos.x - std::fmod(screen_pos.x, 10.0);
         double justify_k = screen_pos.y - std::fmod(screen_pos.y, 10.0);
 
-        hit_rect.setPosition(justify_f, justify_k);
-        window.draw(hit_rect);
+        if (pattern.classification == PatternType::TURING_PATTERN)
+        {
+            t_hit_rect.setPosition(justify_f, justify_k);
+            window.draw(t_hit_rect);
+        }
+        else if (pattern.classification == PatternType::OSCILLATING_PATTERN)
+        {
+            osc_hit_rect.setPosition(justify_f, justify_k);
+            window.draw(osc_hit_rect);
+        }
+        else // SHOULD NEVER HAPPEN
+        {
+            no_hit_rect.setPosition(justify_f, justify_k);
+            window.draw(no_hit_rect);
+        }
     }
 
     if (display_particles)

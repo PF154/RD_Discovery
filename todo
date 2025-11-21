@@ -2,3 +2,4 @@ Add option in real-time mode to tweak f, k, du, dv
 Tune particle behavior
 Tune turing detection model
 Make particles move across 4 dimensions
+Let user save/load parameters

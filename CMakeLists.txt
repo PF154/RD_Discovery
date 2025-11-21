@@ -36,6 +36,7 @@ add_executable(reaction_diffusion
     src/realtime_mode.cpp
     src/particle_swarm_mode.cpp
     src/utilities.cpp
+    src/debug_tools.cpp
     # Project headers
     include/particle.h
     include/rendering.h
@@ -49,6 +50,8 @@ add_executable(reaction_diffusion
     include/particle_swarm_mode.h
     include/sim_types.h
     include/utilities.h
+    include/tuning_parameters.h
+    include/debug_tools.h
     # ImGui core files
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp

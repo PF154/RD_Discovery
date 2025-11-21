@@ -19,6 +19,7 @@
 #include "particle_swarm_mode.h"
 #include "realtime_mode.h"
 #include "utilities.h"
+#include "tuning_parameters.h"
 
 int main()
 {
@@ -35,19 +36,18 @@ int main()
     sf::Clock clock;
 
     // Create and set up particles.
-    constexpr int num_particles = 400;
     std::vector<Particle> particles;
-    particles.reserve(num_particles);
+    particles.reserve(NUM_PARTICLES);
 
     // set up random engine
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> pos_dist(0.0, 1.0);
     std::uniform_real_distribution<double> dir_dist(-1.0, 1.0);
-    std::uniform_real_distribution<double> speed_dist(0.05, 0.15);
+    std::uniform_real_distribution<double> speed_dist(PARTICLE_SPEED_MIN, PARTICLE_SPEED_MAX);
 
 
-    for (int i = 0; i < num_particles; i++)
+    for (int i = 0; i < NUM_PARTICLES; i++)
     {
         double f = pos_dist(gen);
         double k = pos_dist(gen);

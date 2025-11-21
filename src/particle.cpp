@@ -1,6 +1,7 @@
 #include "particle.h"
 #include "async_pattern_detector.h"
 #include "pattern_detection.cuh"
+#include "tuning_parameters.h"
 #include <SFML/System/Time.hpp>
 #include <vector>
 #include <random>
@@ -14,7 +15,7 @@ void scan_particle_positions(
 )
 {
     // Pick batch_size random particles to test
-    int batch_size = 25;
+    constexpr int batch_size = PARTICLE_BATCH_SIZE;
     if (particles.size() < batch_size) return;
 
     std::vector<size_t> indices(particles.size());
@@ -48,8 +49,8 @@ void scan_particle_positions(
             particle->pos.k,
             particle->pos.du,
             particle->pos.dv,
-            0.25,  // dx
-            1.0    // dt
+            PARTICLE_DX,
+            PARTICLE_DT
         });
     }
 
@@ -67,17 +68,17 @@ void update_particle_positions(
     {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_real_distribution<double> infl_dist(-0.10, 0.10);
-        std::uniform_real_distribution<double> speed_dist(0.05, 0.15);
+        std::uniform_real_distribution<double> infl_dist(PARTICLE_INFLUENCE_MIN, PARTICLE_INFLUENCE_MAX);
+        std::uniform_real_distribution<double> speed_dist(PARTICLE_SPEED_MIN, PARTICLE_SPEED_MAX);
 
         double extent_size_f = extents.max_f - extents.min_f;
         double extent_size_k = extents.max_k - extents.min_k;
         double avg_extent_size = (extent_size_f + extent_size_k) / 2.0;
         particle.speed = speed_dist(gen) * avg_extent_size;
 
-        double well_strength = 0.00001 * avg_extent_size * avg_extent_size;
-        double max_influence = 4.5;
-        double max_cumulative_influence = 10.0;
+        double well_strength = WELL_STRENGTH_MULTIPLIER * avg_extent_size * avg_extent_size;
+        constexpr double max_influence = MAX_INFLUENCE;
+        constexpr double max_cumulative_influence = MAX_CUMULATIVE_INFLUENCE;
         Vec4D influence(0.0, 0.0, 0.0, 0.0);
 
         Vec4D random_influence(infl_dist(gen), infl_dist(gen), infl_dist(gen), infl_dist(gen));
@@ -94,8 +95,8 @@ void update_particle_positions(
             double ddu = particle.pos.du - well.params.du;
             double ddv = particle.pos.dv - well.params.dv;
             double distance = std::sqrt(df * df + dk * dk + ddu * ddu + ddv * ddv);
-            
-            double safe_distance = std::max(distance, 0.01);  // Prevent division by near-zero
+
+            double safe_distance = std::max(distance, MIN_SAFE_DISTANCE);  // Prevent division by near-zero
             double influence_magnitude = std::min(
                 max_influence,
                 well_strength / std::pow(safe_distance, 3)

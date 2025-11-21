@@ -3,20 +3,7 @@
 #include <cuda_runtime.h>
 #include <cufft.h>
 #include <vector>
-
-// Grid size (compile-time constant)
-constexpr int PATTERN_NX = 100;
-constexpr int PATTERN_NY = 100;
-
-// Simulation parameters
-constexpr int INITIAL_TIMESTEPS = 5000;   // Pattern formation
-constexpr int STABILITY_TIMESTEPS = 2500; // Temporal stability check
-
-// Analysis thresholds (tune these after testing!)
-constexpr double SPATIAL_RATIO_THRESHOLD = 25.0;  // Peak power / average power
-constexpr double TEMPORAL_CHANGE_THRESHOLD = 0.1; // RMS difference threshold
-constexpr int MIN_WAVE_NUMBER = 3;   // Minimum spatial frequency to consider
-constexpr int MAX_WAVE_NUMBER = 25;  // Maximum spatial frequency to consider
+#include "tuning_parameters.h"
 
 // Pattern classification
 enum PatternType {
@@ -42,6 +29,7 @@ struct PatternResult {
 
     // Spatial periodicity analysis (from FFT)
     double spatial_ratio;      // Peak power / average power
+    double max_power;          // Absolute peak power
     double peak_wave_number;   // Magnitude of dominant frequency
     int peak_kx;               // X component of peak frequency
     int peak_ky;               // Y component of peak frequency

@@ -54,7 +54,6 @@ __global__ void initialize_fields(
 
     const int flat_idx = idx_3d(particle_id, x, y, Nx, Ny);
 
-    // Initialize u = 1.0, v = 0.0
     u_data[flat_idx] = 1.0;
     v_data[flat_idx] = 0.0;
 
@@ -118,9 +117,6 @@ __global__ void compute_temporal_difference(
     double sq_diff = diff * diff;
 
     atomicAdd(&rms_differences[particle_id], sq_diff);
-
-    // TODO (later, after kernel launch):
-    // On host or in another kernel, divide by (Nx*Ny) and take sqrt
 }
 
 __global__ void compute_power_spectrum(
@@ -185,6 +181,7 @@ __global__ void analyze_power_spectrum(
     
     double avg_power = sum_power / count;
     results[particle_id].spatial_ratio = max_power / avg_power;
+    results[particle_id].max_power = max_power;
     results[particle_id].peak_kx = max_kx;
     results[particle_id].peak_ky = max_ky;
     results[particle_id].peak_wave_number = sqrt(max_kx*max_kx + max_ky*max_ky);
@@ -232,8 +229,10 @@ std::vector<PatternResult> detect_patterns_batch(
     ));
 
     // Set up 3D grid/block dimensions for kernel launches
-    dim3 threads(16, 16, 1);
-    dim3 blocks((Nx+15)/16, (Ny+15)/16, num_particles);
+    dim3 threads(PATTERN_THREADS_X, PATTERN_THREADS_Y, PATTERN_THREADS_Z);
+    dim3 blocks((Nx + PATTERN_THREADS_X - 1) / PATTERN_THREADS_X,
+                (Ny + PATTERN_THREADS_Y - 1) / PATTERN_THREADS_Y,
+                num_particles);
 
     // =========================================================================
     // PHASE 1: Initialize fields
@@ -335,7 +334,6 @@ std::vector<PatternResult> detect_patterns_batch(
     // PHASE 6: FFT analysis
     // =========================================================================
 
-    // TODO: Allocate d_freq (complex output) and d_power (power spectrum)
     cufftDoubleComplex* d_freq;
     double* d_power;
     gpuErrchk(cudaMalloc(
@@ -347,7 +345,6 @@ std::vector<PatternResult> detect_patterns_batch(
         sizeof(double) * num_particles * Nx * (Ny/2 + 1)
     ));
 
-    // TODO: Create batched FFT plan using cufftPlanMany
     cufftHandle plan;
     int rank = 2;
     int n[] = {Ny, Nx};
@@ -373,9 +370,8 @@ std::vector<PatternResult> detect_patterns_batch(
     // Compute power spectrum: |freq|^2
     // This is a 1D kernel processing all frequency elements
     int freq_size = num_particles * Nx * (Ny/2 + 1);
-    int freq_threads = 256;
-    int freq_blocks = (freq_size + freq_threads - 1) / freq_threads;
-    compute_power_spectrum<<<freq_blocks, freq_threads>>>(d_freq, d_power, freq_size);
+    int freq_blocks = (freq_size + FFT_THREADS - 1) / FFT_THREADS;
+    compute_power_spectrum<<<freq_blocks, FFT_THREADS>>>(d_freq, d_power, freq_size);
 
 
     // =========================================================================
@@ -386,9 +382,8 @@ std::vector<PatternResult> detect_patterns_batch(
     gpuErrchk(cudaMalloc(&d_results, sizeof(PatternResult) * num_particles));
 
     // Analyze power spectrum: one thread per particle
-    int power_threads = 256;
-    int power_blocks = (num_particles + power_threads - 1) / power_threads;
-    analyze_power_spectrum<<<power_blocks, power_threads>>>(
+    int power_blocks = (num_particles + POWER_ANALYSIS_THREADS - 1) / POWER_ANALYSIS_THREADS;
+    analyze_power_spectrum<<<power_blocks, POWER_ANALYSIS_THREADS>>>(
         d_power, d_results, num_particles, Nx, (Ny/2 + 1));
 
     // =========================================================================
@@ -405,11 +400,13 @@ std::vector<PatternResult> detect_patterns_batch(
         results[i].params = param_sets[i];
         results[i].temporal_change = h_rms_diff[i];
         if (results[i].spatial_ratio > SPATIAL_RATIO_THRESHOLD
+            && results[i].max_power > MIN_PEAK_POWER
             && results[i].temporal_change < TEMPORAL_CHANGE_THRESHOLD)
         {
             results[i].classification = PatternType::TURING_PATTERN;
         }
-        else if (results[i].spatial_ratio > SPATIAL_RATIO_THRESHOLD)
+        else if (results[i].spatial_ratio > SPATIAL_RATIO_THRESHOLD
+                 && results[i].max_power > MIN_PEAK_POWER)
         {
             results[i].classification = PatternType::OSCILLATING_PATTERN;
         }
