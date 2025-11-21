@@ -132,10 +132,14 @@ int main()
 
                 sf::Vector2i mousePos = sf::Mouse::getPosition(window);
 
+                // Store original extents before modifying
+                FKExtents original_extents = sim_extents;
+
                 sim_extents.min_f = selection_state.current_extents.min_f;
                 sim_extents.min_k = selection_state.current_extents.min_k;
 
-                sf::Vector2f param_coords = screen_to_param(mousePos.x, mousePos.y, sim_extents);
+                // Use ORIGINAL extents for conversion
+                sf::Vector2f param_coords = screen_to_param(mousePos.x, mousePos.y, original_extents);
 
                 sim_extents.max_f = param_coords.x;
                 sim_extents.max_k = param_coords.y;

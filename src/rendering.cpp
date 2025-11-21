@@ -52,7 +52,7 @@ void draw_axes(sf::RenderWindow& window, float min_f, float max_f, float min_k, 
     // Draw f-axis ticks (vertical ticks along horizontal axis at top)
     for (int i = 0; i <= NUM_TICKS; i++) {
         float t = static_cast<float>(i) / NUM_TICKS;
-        float x = AXIS_OFFSET + t * (AXIS_SIZE - AXIS_OFFSET);
+        float x = t * AXIS_SIZE;  // Evenly space across full screen width
         float f_value = min_f + t * (max_f - min_f);
 
         // Draw tick mark (pointing down)
@@ -84,7 +84,7 @@ void draw_axes(sf::RenderWindow& window, float min_f, float max_f, float min_k, 
     // Draw k-axis ticks (horizontal ticks along vertical axis on left)
     for (int i = 0; i <= NUM_TICKS; i++) {
         float t = static_cast<float>(i) / NUM_TICKS;
-        float y = AXIS_OFFSET + t * (AXIS_SIZE - AXIS_OFFSET);
+        float y = t * AXIS_SIZE;  // Evenly space across full screen height
         float k_value = min_k + t * (max_k - min_k);
 
         // Draw tick mark (pointing right)
