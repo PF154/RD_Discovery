@@ -12,7 +12,7 @@ void run_particle_swarm(
     AsyncPatternDetector& detector,
     std::vector<Particle>& particles,
     sf::Clock& clock,
-    const FKExtents& extents,
+    FKExtents& extents,
     const SelectionState& selection_state,
     bool& reset_extents
 );

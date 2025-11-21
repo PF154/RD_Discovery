@@ -6,6 +6,7 @@
 #include <imgui-SFML.h>
 #include <vector>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <random>
 #include "rendering.h"
@@ -17,7 +18,7 @@ void run_particle_swarm(
     AsyncPatternDetector& detector,
     std::vector<Particle>& particles,
     sf::Clock& clock,
-    const FKExtents& extents,
+    FKExtents& extents,
     const SelectionState& selection_state,
     bool& reset_extents
 )
@@ -65,6 +66,12 @@ void run_particle_swarm(
     static FKExtents particle_extents = extents;
     static bool constrain_particles = false;
 
+    // Extent input text buffers (use static char arrays for ImGui input)
+    static char min_f_input[64] = "";
+    static char max_f_input[64] = "";
+    static char min_k_input[64] = "";
+    static char max_k_input[64] = "";
+
     int hovered_pattern_idx = find_pattern_under_mouse(sf::Mouse::getPosition(window), turing, extents);
     update_pattern_display(hovered_pattern_idx, turing, pattern_texture);
 
@@ -96,14 +103,14 @@ void run_particle_swarm(
     sf::Time delta = clock.restart();
     ImGui::SFML::Update(window, delta);
 
-    // Lock ImGui to bottom of screen
+    // Lock ImGui to right of screen
     ImGui::SetNextWindowPos(ImVec2(1000, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(300, 1000), ImGuiCond_Always);
 
     ImGuiWindowFlags flags  = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
     ImGui::Begin("Reaction Diffusion", nullptr, flags);
 
-    // ImGui::Rows(2, "rows");
+    ImGui::Text("Visualization options");
 
     ImGui::SliderFloat("R", &R, 0.0f, 255.0f);
     ImGui::SliderFloat("G", &G, 0.0f, 255.0f);
@@ -115,7 +122,63 @@ void run_particle_swarm(
     ImGui::Checkbox("Particles", &display_particles);
     ImGui::Checkbox("Axes", &display_axes);
 
-    if (ImGui::Button("Constrain particle movement to exetents"))
+    // Extent specification section
+    ImGui::Separator();
+    ImGui::Text("Extent Controls");
+
+    ImGui::PushItemWidth(130);
+    ImGui::InputText("Min F", min_f_input, sizeof(min_f_input), ImGuiInputTextFlags_CharsDecimal);
+    ImGui::InputText("Max F", max_f_input, sizeof(max_f_input), ImGuiInputTextFlags_CharsDecimal);
+
+    ImGui::InputText("Min K", min_k_input, sizeof(min_k_input), ImGuiInputTextFlags_CharsDecimal);
+    ImGui::InputText("Max K", max_k_input, sizeof(max_k_input), ImGuiInputTextFlags_CharsDecimal);
+    ImGui::PopItemWidth();
+
+    if (ImGui::Button("Submit Extents"))
+    {
+        // Parse input strings to doubles
+        bool valid = true;
+        double new_min_f, new_max_f, new_min_k, new_max_k;
+
+        try {
+            if (strlen(min_f_input) > 0) new_min_f = std::stod(min_f_input);
+            else valid = false;
+
+            if (strlen(max_f_input) > 0) new_max_f = std::stod(max_f_input);
+            else valid = false;
+
+            if (strlen(min_k_input) > 0) new_min_k = std::stod(min_k_input);
+            else valid = false;
+
+            if (strlen(max_k_input) > 0) new_max_k = std::stod(max_k_input);
+            else valid = false;
+        } catch (...) {
+            valid = false;
+        }
+
+        if (valid) {
+            // Update extents (they will be corrected if inverted by correct_extents in main loop)
+            extents.min_f = new_min_f;
+            extents.max_f = new_max_f;
+            extents.min_k = new_min_k;
+            extents.max_k = new_max_k;
+
+            extents_modified = true;
+
+            // Clear input fields
+            min_f_input[0] = '\0';
+            max_f_input[0] = '\0';
+            min_k_input[0] = '\0';
+            max_k_input[0] = '\0';
+        }
+    }
+
+    // Display current extents
+    ImGui::Text("Current extents:");
+    ImGui::Text("F: [%.6f, %.6f]", extents.min_f, extents.max_f);
+    ImGui::Text("K: [%.6f, %.6f]", extents.min_k, extents.max_k);
+
+    if (ImGui::Button("Constrain particle movement to extents"))
     {
         // Redo particle positioning
         std::uniform_real_distribution<double> f_dist(extents.min_f, extents.max_f);
@@ -136,15 +199,15 @@ void run_particle_swarm(
         }
     }
 
-    // Debug/Analysis Tools
-    ImGui::Separator();
-    ImGui::Text("Debug Tools");
-    ImGui::Text("Patterns detected: %zu", turing.size());
+    // // Debug/Analysis Tools
+    // ImGui::Separator();
+    // ImGui::Text("Debug Tools");
+    // ImGui::Text("Patterns detected: %zu", turing.size());
 
-    if (ImGui::Button("Export Patterns to CSV"))
-    {
-        export_patterns_csv(turing, "detected_patterns.csv");
-    }
+    // if (ImGui::Button("Export Patterns to CSV"))
+    // {
+    //     export_patterns_csv(turing, "detected_patterns.csv");
+    // }
 
     // Add any other widgets here
 
