@@ -74,7 +74,7 @@ void update_particle_positions(
         double extent_size_f = extents.max_f - extents.min_f;
         double extent_size_k = extents.max_k - extents.min_k;
         double avg_extent_size = (extent_size_f + extent_size_k) / 2.0;
-        particle.speed = speed_dist(gen) * avg_extent_size;
+        particle.speed = speed_dist(gen);
 
         double well_strength = WELL_STRENGTH_MULTIPLIER * avg_extent_size * avg_extent_size;
         constexpr double max_influence = MAX_INFLUENCE;
@@ -125,13 +125,16 @@ void update_particle_positions(
             particle.dir.dv /= dir_magnitude;
         }
 
-        particle.pos.f += particle.dir.f * particle.speed * delta.asSeconds();
-        particle.pos.k += particle.dir.k * particle.speed * delta.asSeconds();
-
-        // Particle position is periodic within extents
+        // Calculate extent ranges
         double range_f = extents.max_f - extents.min_f;
         double range_k = extents.max_k - extents.min_k;
 
+        // Apply speed and scale by extent ranges when updating position
+        // This makes speed relative to the extent size in each dimension
+        particle.pos.f += particle.dir.f * particle.speed * range_f * delta.asSeconds();
+        particle.pos.k += particle.dir.k * particle.speed * range_k * delta.asSeconds();
+
+        // Particle position is periodic within extents
         particle.pos.f = extents.min_f + std::fmod(particle.pos.f - extents.min_f + range_f, range_f);
         particle.pos.k = extents.min_k + std::fmod(particle.pos.k - extents.min_k + range_k, range_k);
     }

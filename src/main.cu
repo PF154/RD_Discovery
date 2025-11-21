@@ -118,9 +118,6 @@ int main()
 
                 selection_state.current_extents.min_f = param_coords.x;
                 selection_state.current_extents.min_k = param_coords.y;
-
-                std::cout << "min f: " << selection_state.current_extents.min_f << std::endl;
-                std::cout << "min k: " << selection_state.current_extents.min_k << std::endl;
             }
             
             // Right click release indicates selection
@@ -143,9 +140,6 @@ int main()
 
                 sim_extents.max_f = param_coords.x;
                 sim_extents.max_k = param_coords.y;
-
-                std::cout << "max f: " << sim_extents.max_f << std::endl;
-                std::cout << "max k: " << sim_extents.max_k << std::endl;
             }
 
         }

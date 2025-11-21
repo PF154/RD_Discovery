@@ -18,7 +18,7 @@ constexpr int STABILITY_TIMESTEPS = 2500;
 
 constexpr double SPATIAL_RATIO_THRESHOLD = 500.0;
 constexpr double TEMPORAL_CHANGE_THRESHOLD = 0.23;
-constexpr double MIN_PEAK_POWER = 10000.0;  // Minimum absolute FFT peak power
+constexpr double MIN_PEAK_POWER = 10000.0;
 constexpr int MIN_WAVE_NUMBER = 3;
 constexpr int MAX_WAVE_NUMBER = 25;
 
