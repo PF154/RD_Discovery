@@ -11,6 +11,7 @@
 #include <random>
 #include "rendering.h"
 #include "utilities.h"
+#include "pattern_quadtree.h"
 
 void run_particle_swarm(
     sf::RenderWindow& window,
@@ -23,6 +24,10 @@ void run_particle_swarm(
     bool& reset_extents
 )
 {
+    static PatternQuadTree quadtree(extents, 8, 0.5);  // max 8 patterns/cell, theta=0.5
+    static bool quadtree_needs_rebuild = true;
+    static size_t last_pattern_count = 0;
+
     static std::random_device rd;
     static std::mt19937 gen(rd());
 
@@ -91,6 +96,9 @@ void run_particle_swarm(
                 }
             }
         }
+
+        // Mark quadtree for rebuild since new patterns were added
+        quadtree_needs_rebuild = true;
     }
 
     // Submit work at regular intervals
@@ -230,7 +238,15 @@ void run_particle_swarm(
 
     ImGui::End();
 
-    update_particle_positions(particles, turing, delta, particle_extents);
+    // Rebuild quadtree if needed (when new patterns arrive)
+    if (quadtree_needs_rebuild && !turing.empty())
+    {
+        quadtree.build(turing);
+        quadtree_needs_rebuild = false;
+    }
+
+    // Update particles using quadtree
+    update_particle_positions_with_quadtree(particles, quadtree, delta, particle_extents, turing);
 
     // Clear window
     window.clear(sf::Color::Black);

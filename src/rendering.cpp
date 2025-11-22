@@ -112,6 +112,31 @@ void draw_axes(sf::RenderWindow& window, float min_f, float max_f, float min_k, 
             window.draw(label);
         }
     }
+
+    // Draw axis labels (F and k)
+    if (font_loaded) {
+        // F label
+        sf::Text f_label;
+        f_label.setFont(font);
+        f_label.setString("F");
+        f_label.setCharacterSize(16);
+        f_label.setFillColor(sf::Color::White);
+        f_label.setStyle(sf::Text::Bold);
+        sf::FloatRect f_bounds = f_label.getLocalBounds();
+        f_label.setPosition(30, AXIS_OFFSET - f_bounds.height + 15);
+        window.draw(f_label);
+
+        // k label
+        sf::Text k_label;
+        k_label.setFont(font);
+        k_label.setString("k");
+        k_label.setCharacterSize(16);
+        k_label.setFillColor(sf::Color::White);
+        k_label.setStyle(sf::Text::Bold);
+        sf::FloatRect k_bounds = k_label.getLocalBounds();
+        k_label.setPosition(AXIS_OFFSET - k_bounds.width + 15, 30);
+        window.draw(k_label);
+    }
 }
 
 sf::Image image_from_pattern_data(const PatternResult& pattern) 

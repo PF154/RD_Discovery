@@ -1,6 +1,7 @@
 #include "particle.h"
 #include "async_pattern_detector.h"
 #include "pattern_detection.cuh"
+#include "pattern_quadtree.h"
 #include "tuning_parameters.h"
 #include <SFML/System/Time.hpp>
 #include <vector>
@@ -102,10 +103,73 @@ void update_particle_positions(
                 well_strength / std::pow(safe_distance, 3)
             );
             influence.f = std::min(influence.f - df * influence_magnitude, max_cumulative_influence);
-            influence.k = std::min(influence.f - dk * influence_magnitude, max_cumulative_influence);
-            influence.du = std::min(influence.f - ddu * influence_magnitude, max_cumulative_influence);
-            influence.dv = std::min(influence.f - ddv * influence_magnitude, max_cumulative_influence);
+            influence.k = std::min(influence.k - dk * influence_magnitude, max_cumulative_influence);
+            influence.du = std::min(influence.du - ddu * influence_magnitude, max_cumulative_influence);
+            influence.dv = std::min(influence.dv - ddv * influence_magnitude, max_cumulative_influence);
         }
+
+        particle.dir.f += influence.f + random_influence.f;
+        particle.dir.k += influence.k + random_influence.k;
+
+        // Normalize the direction vector to maintain unit length
+        double dir_magnitude = std::sqrt(
+            particle.dir.f * particle.dir.f +
+            particle.dir.k * particle.dir.k +
+            particle.dir.du * particle.dir.du +
+            particle.dir.dv * particle.dir.dv
+        );
+
+        if (dir_magnitude > 0.0) {
+            particle.dir.f /= dir_magnitude;
+            particle.dir.k /= dir_magnitude;
+            particle.dir.du /= dir_magnitude;
+            particle.dir.dv /= dir_magnitude;
+        }
+
+        // Calculate extent ranges
+        double range_f = extents.max_f - extents.min_f;
+        double range_k = extents.max_k - extents.min_k;
+
+        // Apply speed and scale by extent ranges when updating position
+        // This makes speed relative to the extent size in each dimension
+        particle.pos.f += particle.dir.f * particle.speed * range_f * delta.asSeconds();
+        particle.pos.k += particle.dir.k * particle.speed * range_k * delta.asSeconds();
+
+        // Particle position is periodic within extents
+        particle.pos.f = extents.min_f + std::fmod(particle.pos.f - extents.min_f + range_f, range_f);
+        particle.pos.k = extents.min_k + std::fmod(particle.pos.k - extents.min_k + range_k, range_k);
+    }
+}
+
+void update_particle_positions_with_quadtree(
+    std::vector<Particle>& particles,
+    PatternQuadTree& quadtree,
+    const sf::Time& delta,
+    const FKExtents& extents,
+    const std::vector<PatternResult>& patterns
+)
+{
+    for (Particle& particle: particles)
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> infl_dist(PARTICLE_INFLUENCE_MIN, PARTICLE_INFLUENCE_MAX);
+        std::uniform_real_distribution<double> speed_dist(PARTICLE_SPEED_MIN, PARTICLE_SPEED_MAX);
+
+        double extent_size_f = extents.max_f - extents.min_f;
+        double extent_size_k = extents.max_k - extents.min_k;
+        double avg_extent_size = (extent_size_f + extent_size_k) / 2.0;
+        particle.speed = speed_dist(gen);
+
+        double well_strength = WELL_STRENGTH_MULTIPLIER * avg_extent_size * avg_extent_size;
+        constexpr double max_influence = MAX_INFLUENCE;
+        constexpr double max_cumulative_influence = MAX_CUMULATIVE_INFLUENCE;
+
+        Vec4D random_influence(infl_dist(gen), infl_dist(gen), infl_dist(gen), infl_dist(gen));
+        Vec4D influence = quadtree.calculate_influence(particle.pos, extents, patterns);
+
+        influence.f = std::min(influence.f, MAX_CUMULATIVE_INFLUENCE);
+        influence.k = std::min(influence.k, MAX_CUMULATIVE_INFLUENCE);
 
         particle.dir.f += influence.f + random_influence.f;
         particle.dir.k += influence.k + random_influence.k;

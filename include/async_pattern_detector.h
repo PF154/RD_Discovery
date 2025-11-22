@@ -35,12 +35,12 @@ public:
 
 private:
     // Communication queues (main <-> worker thread)
-    ThreadSafeQueue<WorkItem> work_queue_;    // Main -> Worker
-    ThreadSafeQueue<Result> result_queue_;    // Worker -> Main
+    ThreadSafeQueue<WorkItem> m_work_queue;    // Main -> Worker
+    ThreadSafeQueue<Result> m_result_queue;    // Worker -> Main
 
     // Worker thread management
-    std::thread worker_thread_;               // Background thread
-    std::atomic<bool> shutdown_;              // Shutdown signal
+    std::thread m_worker_thread;               // Background thread
+    std::atomic<bool> m_shutdown;              // Shutdown signal
 
     /**
      * Worker thread function - runs in background

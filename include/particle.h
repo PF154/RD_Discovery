@@ -8,9 +8,11 @@
 
 // Need this for submitting work to the GPU manager thread
 class AsyncPatternDetector;
+class PatternQuadTree;
 
 struct Vec4D
 {
+    Vec4D () {};
     Vec4D(double f, double k, double du, double dv)
         : f(f), k(k), du(du), dv(dv) {};
     double f = 0.0;
@@ -39,4 +41,11 @@ void update_particle_positions(
     std::vector<PatternResult>& wells,
     const sf::Time& delta,
     const FKExtents& extents
+);
+void update_particle_positions_with_quadtree(
+    std::vector<Particle>& particles,
+    PatternQuadTree& quadtree,
+    const sf::Time& delta,
+    const FKExtents& extents,
+    const std::vector<PatternResult>& patterns
 );

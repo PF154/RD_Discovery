@@ -61,7 +61,6 @@ int main()
     AsyncPatternDetector detector;
 
     // Keep track of valid patterns
-    // Eventually, this should be a more complex data structure
     std::vector<PatternResult> turing;
 
     std::optional<PatternViewerState> realtime_pattern;
