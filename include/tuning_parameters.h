@@ -34,7 +34,7 @@ constexpr int POWER_ANALYSIS_THREADS = 256;
 // ============================================================================
 
 // Number of particles in swarm
-constexpr int NUM_PARTICLES = 400;
+constexpr int NUM_PARTICLES = 100;
 
 // Particle scanning
 constexpr int PARTICLE_BATCH_SIZE = 25;
@@ -57,7 +57,7 @@ constexpr double PARTICLE_SPEED_MIN = 0.05;
 constexpr double PARTICLE_SPEED_MAX = 0.15;
 
 // Well attraction parameters
-constexpr double WELL_STRENGTH_MULTIPLIER = 0.00001;
-constexpr double MAX_INFLUENCE = 4.5;
+constexpr double WELL_STRENGTH_MULTIPLIER = 0.0001;
+constexpr double MAX_INFLUENCE = 6.0;
 constexpr double MAX_CUMULATIVE_INFLUENCE = 10.0;
 constexpr double MIN_SAFE_DISTANCE = 0.01;

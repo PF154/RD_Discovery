@@ -78,6 +78,7 @@ void update_particle_positions(
         particle.speed = speed_dist(gen);
 
         double well_strength = WELL_STRENGTH_MULTIPLIER * avg_extent_size * avg_extent_size;
+        double scaled_safe_distance = MIN_SAFE_DISTANCE * avg_extent_size;  // Scale with extent size
         constexpr double max_influence = MAX_INFLUENCE;
         constexpr double max_cumulative_influence = MAX_CUMULATIVE_INFLUENCE;
         Vec4D influence(0.0, 0.0, 0.0, 0.0);
@@ -97,7 +98,7 @@ void update_particle_positions(
             double ddv = particle.pos.dv - well.params.dv;
             double distance = std::sqrt(df * df + dk * dk + ddu * ddu + ddv * ddv);
 
-            double safe_distance = std::max(distance, MIN_SAFE_DISTANCE);  // Prevent division by near-zero
+            double safe_distance = std::max(distance, scaled_safe_distance);  // Prevent division by near-zero
             double influence_magnitude = std::min(
                 max_influence,
                 well_strength / std::pow(safe_distance, 3)
@@ -160,10 +161,6 @@ void update_particle_positions_with_quadtree(
         double extent_size_k = extents.max_k - extents.min_k;
         double avg_extent_size = (extent_size_f + extent_size_k) / 2.0;
         particle.speed = speed_dist(gen);
-
-        double well_strength = WELL_STRENGTH_MULTIPLIER * avg_extent_size * avg_extent_size;
-        constexpr double max_influence = MAX_INFLUENCE;
-        constexpr double max_cumulative_influence = MAX_CUMULATIVE_INFLUENCE;
 
         Vec4D random_influence(infl_dist(gen), infl_dist(gen), infl_dist(gen), infl_dist(gen));
         Vec4D influence = quadtree.calculate_influence(particle.pos, extents, patterns);

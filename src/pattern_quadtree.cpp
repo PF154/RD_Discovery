@@ -249,6 +249,7 @@ Vec4D PatternQuadTree::calculate_influence_recursive(
     double avg_extent_size = (extent_size_f + extent_size_k) / 2.0;
 
     double well_strength = WELL_STRENGTH_MULTIPLIER * avg_extent_size * avg_extent_size;
+    double scaled_safe_distance = MIN_SAFE_DISTANCE * avg_extent_size;  // Scale with extent size
 
     if (node->is_leaf())
     {
@@ -270,7 +271,7 @@ Vec4D PatternQuadTree::calculate_influence_recursive(
             double ddv = particle_pos.dv - pattern.params.dv;
             double dist = sqrt(df * df + dk * dk + ddu * ddu + ddv * ddv);
 
-            double safe_distance = std::max(dist, MIN_SAFE_DISTANCE);  // Prevent division by near-zero
+            double safe_distance = std::max(dist, scaled_safe_distance);  // Prevent division by near-zero
             double influence_magnitude = std::min(
                 MAX_INFLUENCE,
                 well_strength / std::pow(safe_distance, 3)
@@ -298,7 +299,7 @@ Vec4D PatternQuadTree::calculate_influence_recursive(
             double ddv = particle_pos.dv - node->center_of_mass.dv;
             double dist = sqrt(df * df + dk * dk + ddu * ddu + ddv * ddv);
 
-            double safe_distance = std::max(dist, MIN_SAFE_DISTANCE);  // Prevent division by near-zero
+            double safe_distance = std::max(dist, scaled_safe_distance);  // Prevent division by near-zero
             double influence_magnitude = std::min(
                 MAX_INFLUENCE,
                 well_strength / std::pow(safe_distance, 3)
