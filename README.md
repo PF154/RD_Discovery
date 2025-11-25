@@ -26,7 +26,7 @@ When altering the extents of the particle simulation domain (which the user can 
 ## Techniques Used
 
 ### Concurrency
-This program employs a classic producer-consumer model to send data between the particle simulation thread, which handles the UI and visualization, and the pattern detection thread, which must compute massive amounts of data on the GPU for every frame. If the UI were to wait on the GPU to finish, it would slow the program down beyond the point of usability. Instead, a thread safe queue is used to send work to the GPU (consumer), and render completed work to the screen (consumer).
+This program employs a classic producer-consumer model to send data between the particle simulation thread, which handles the UI and visualization, and the pattern detection thread, which must compute massive amounts of data on the GPU for every frame. If the UI were to wait on the GPU to finish, it would slow the program down beyond the point of usability. Instead, a thread safe queue is used to send work to the GPU (producer), and render completed work to the screen (consumer).
 
 ### CUDA Pogramming
 This project has to compute an enormous number of timesteps to determine if a particle has located a turing pattern. To handle this, it leverages CUDA to compute the timesteps in parallel, using mega-batch processing to further increase parallelism. This allows for rapid computation of the individual reaction-diffusion simulations, each of which must run for 7500 timesteps on a 100x100 grid.
