@@ -34,6 +34,9 @@ This project has to compute an enormous number of timesteps to determine if a pa
 ### Quad tree data structure
 The particle swarm algorithm is based on [algorithms](https://en.wikipedia.org/wiki/Particle_swarm_optimization) which operate on a continuous surface. In these, a particle would save a local and global best value, which would then influence it's navigation. However, our search condition here is boolean: either a set of parameters generates a turing pattern or it doesn't. To adapt the particle swarm behvaior to this scenario, the code exploits the quad tree data structure to determine which discovered patterns should have their own "pull" on the particles and which should be clustered into a single point of influence (for those farther away from the particle).
 
+## Future development
+A few features still remain that I'd like to add to this project. For starters, I would like to find a way for the particles to move in four dimensions. This is what the "Du" and "Dv" sliders are intended for in the particle swarm mode, but I am still figuring out how I want to visualize this. On the smaller scale, I have some work left to do with parameter tweaking. I think I can likely send more work to the GPU than I am currently, and I don't want to use the stand in solution of sending work on a time interval in the long-term. Additionally, I plan on tweaking the particle behavior soon, as the recent implementation of the QuadTree, while highly efficent, disturbed their previous behavior.
+
 ## Dependencies
 
 ### System-Installed
