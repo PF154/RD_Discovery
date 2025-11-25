@@ -38,9 +38,6 @@ The particle swarm algorithm is based on [algorithms](https://en.wikipedia.org/w
 
 ### System-Installed
 - **SFML 2.5+** - Graphics library for windowing and rendering
-  ```bash
-  sudo apt install libsfml-dev
-  ```
 - **CUDA Toolkit** - For GPU acceleration
 - **OpenGL** - Required by ImGui-SFML (usually pre-installed on Linux)
 
